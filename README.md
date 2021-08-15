@@ -1,8 +1,7 @@
 ## VoltaireTaMere c'est LE logiciel de triche au projet Voltaire le plus perfectionné. Avec plus de 8 mois de devellopement à sont actif vous pouvez etre sur que vous avez la LE programme qui vous termine le projet voltaire.
 
-------------------------------------
 [SITE](https://sites.google.com/view/voltairetamere/voltairetamere) [FAQ](https://sites.google.com/view/voltairetamere/faq) [DEMO](https://youtu.be/plQ6ko-PKJc)
-------------------------------------
+
 # =========== [4.0.0] ===========
 * [NEW]
   * Nouvelle architecture de code "blitzkrieg" + stable
@@ -25,6 +24,7 @@
 Téléchargez simplement l'installateur ou téléchargez tous les fichiers (Executable non compris sur GitHub) et placés ensemble dans un même répertoire.
 liens de l'installateur (trop lourd pour GitHub): https://sites.google.com/view/voltairetamere/voltairetamere
 
+# INFORMATION
 Une console Windows va s’ouvrir ne pas la fermer lorsque vous utilisé le programme, réduisez la simplement. 
 En cas de problème au démarrage réinstallez simplement le logiciel. 
 IL CE PEUT QUE L'ANTIVIRUS BLOQUE L’EXÉCUTION DU .EXE CAR LE FICHIER EST INCONNU DE CELUI CI. 
