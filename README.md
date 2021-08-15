@@ -1,39 +1,27 @@
-VoltaireTaMere c'est LE logiciel de triche au projet Voltaire le plus perfectionné. Avec plus de 8 mois de devellopement à sont actif vous pouvez etre sur que vous avez la LE programme qui vous termine le projet voltaire.
+##VoltaireTaMere c'est LE logiciel de triche au projet Voltaire le plus perfectionné. Avec plus de 8 mois de devellopement à sont actif vous pouvez etre sur que vous avez la LE programme qui vous termine le projet voltaire.
 
 ------------------------------------
-SITE: https://sites.google.com/view/voltairetamere/voltairetamere
+[SITE](https://sites.google.com/view/voltairetamere/voltairetamere) [FAQ](https://sites.google.com/view/voltairetamere/faq) [DEMO](https://youtu.be/plQ6ko-PKJc)
 ------------------------------------
-FAQ: https://sites.google.com/view/voltairetamere/faq
-------------------------------------
-=========== [4.0.0] ===========
-[NEW]
--Nouvelle architecture de code "blitzkrieg" + stable
+#=========== [4.0.0] ===========
+*[NEW]
+  *Nouvelle architecture de code "blitzkrieg" + stable
+  *Nouvelle interface plus simple
+  *Mises à jour du driver et du logiciel automatique
+*[MODIF]
+  *Amélioration des algorithmes pour une meilleure précision
+  *Utilisation de JSON
+  *Meilleures gestions des crashs
+*[DEL]
+  *Plus besoin de charger de fichier, cela est fait automatiquement
+  *Suppressions de la compatibilité avec Firefox et Opéra
+  *Dispartion des fichiers de données
 
--Nouvelle interface plus simple
+#REQUIREMENT:
+  *Chrome
+  *Un PC qui fonctionne
 
--Mises à jour du driver et du logiciel automatique
-[MODIF]
-
--Amélioration des algorithmes pour une meilleure précision
-
--Utilisation de JSON
-
--Meilleures gestions des crashs
-[DEL]
-
--Plus besoin de charger de fichier, cela est fait automatiquement
--Suppressions de la compatibilité avec Firefox et Opéra
--Dispartion des fichiers de données
-
-
-DEMO: https://youtu.be/plQ6ko-PKJc
-
-REQUIREMENT:
-
--Chrome
--Un PC qui fonctionne
-
-INSTALLATION:
+#INSTALLATION:
 Téléchargez simplement l'installateur ou téléchargez tous les fichiers (Executable non compris sur GitHub) et placés ensemble dans un même répertoire.
 liens de l'installateur (trop lourd pour GitHub): https://sites.google.com/view/voltairetamere/voltairetamere
 
