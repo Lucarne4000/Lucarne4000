@@ -16,7 +16,7 @@
   * Suppressions de la compatibilité avec Firefox et Opéra
   * Dispartion des fichiers de données
 
-# REQUIREMENT:
+# REQUIREMENTS:
   * Chrome
   * Un PC qui fonctionne
 
@@ -24,7 +24,7 @@
 Téléchargez simplement l'installateur ou téléchargez tous les fichiers (Executable non compris sur GitHub) et placés ensemble dans un même répertoire.
 liens de l'installateur (trop lourd pour GitHub): https://sites.google.com/view/voltairetamere/voltairetamere
 
-# INFORMATION
+# INFORMATIONS:
 Une console Windows va s’ouvrir ne pas la fermer lorsque vous utilisé le programme, réduisez la simplement. 
 En cas de problème au démarrage réinstallez simplement le logiciel. 
 IL CE PEUT QUE L'ANTIVIRUS BLOQUE L’EXÉCUTION DU .EXE CAR LE FICHIER EST INCONNU DE CELUI CI. 
