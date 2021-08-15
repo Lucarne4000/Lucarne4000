@@ -1,95 +1,196 @@
+#  __     __            __    __                __                   ________          __       __                               
+# |  \   |  \          |  \  |  \              |  \                 |        \        |  \     /  \                              
+# | $$   | $$  ______  | $$ _| $$_     ______   \$$  ______    ______\$$$$$$$$______  | $$\   /  $$  ______    ______    ______  
+# | $$   | $$ /      \ | $$|   $$ \   |      \ |  \ /      \  /      \ | $$  |      \ | $$$\ /  $$$ /      \  /      \  /      \ 
+#  \$$\ /  $$|  $$$$$$\| $$ \$$$$$$    \$$$$$$\| $$|  $$$$$$\|  $$$$$$\| $$   \$$$$$$\| $$$$\  $$$$|  $$$$$$\|  $$$$$$\|  $$$$$$\
+#   \$$\  $$ | $$  | $$| $$  | $$ __  /      $$| $$| $$   \$$| $$    $$| $$  /      $$| $$\$$ $$ $$| $$    $$| $$   \$$| $$    $$
+#    \$$ $$  | $$__/ $$| $$  | $$|  \|  $$$$$$$| $$| $$      | $$$$$$$$| $$ |  $$$$$$$| $$ \$$$| $$| $$$$$$$$| $$      | $$$$$$$$
+#     \$$$    \$$    $$| $$   \$$  $$ \$$    $$| $$| $$       \$$     \| $$  \$$    $$| $$  \$ | $$ \$$     \| $$       \$$     \
+#      \$      \$$$$$$  \$$    \$$$$   \$$$$$$$ \$$ \$$        \$$$$$$$ \$$   \$$$$$$$ \$$      \$$  \$$$$$$$ \$$        \$$$$$$$
+
+#################################################################################################################################                                                                                                                           
+#                                        Fichier des fonctionx d'initialisation                                                 #
+#################################################################################################################################
+
+import requests
+import wget
+import zipfile
+import os, sys
+from seleniumwire.webdriver import Chrome
+
 import json
-from tkinter import Tk, Toplevel, Label, PhotoImage, Button
+import tkgen.gengui
 import webbrowser
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as chrome_options
-from selenium.webdriver.firefox.options import Options as firefox_options
-from selenium.webdriver.opera.options import Options as opera_options
-from file_function import print_debug, found_data
 
-class pop_up:
-    def __init__(self, cmd, parent=None):
-        self.cmd = cmd
-        self.size = cmd.get("size")
-        self.txt = cmd.get("text")
-        if self.txt:
-            self.txt = self.txt.replace("\\n","\n")
-        self.title = cmd.get("title")
-        self.link = cmd.get("link")
-        self.lock = cmd.get("lock")
-        if parent:
-            self.root = Toplevel(parent)
-        else:
-            self.root = Tk()
-            self.root.iconphoto(True, PhotoImage(file = "asset\\VoltaireTaMere_icon[PNG].png"))
-        self.root.title(self.title)
-        self.root.resizable(False, False)
-        self.root.geometry(self.size)
-        self.root.configure(bg='#23272A')
+from time import sleep
 
-        Label(self.root, text=self.txt, bg='#23272A', fg='#ffffff', font=('Helvetica', '10',"bold")).pack()
+def download_file(download_url, name_of_file, is_zip):
+    """
+    ############## description ##############\n
+    Télécharge un fichier.
 
-        Button(self.root,
-                        text="  OK  ",
-                        command=lambda: [self.open_link(), self.root.destroy(), self.stop()],  
-                        bg="#a2d417",
-                        fg="#ffffff",
-                        activebackground  ="#a2d417",
-                        bd=0).pack()
-    
-    def open_link(self):
-        if self.link != None:
-            webbrowser.open_new(self.link)
-
-    def stop(self):
-        if self.lock:
-            exit()
-
-def connect(driver):
-    try:
-        driver.find_element_by_id("btn_home_sortir").click()
-    except:
-        pass
-    driver.get("https://www.projet-voltaire.fr/voltaire/com.woonoz.gwt.woonoz.Voltaire/Voltaire.html?returnUrl=www.projet-voltaire.fr/choix-parcours/&applicationCode=pv")
-    
-    if found_data("./file/options.txt", "auto_login"):
-        logIn= found_data(".\\file\\log.txt", "login")
-        mdp = found_data(".\\file\\log.txt", "mdp")
+    ######### parametre(s) et resultat(s) #########\n
+    :param download_url: [str] Url de téléchargement.
+    :param name_of_file: [str] Nom du fichier à téléchargé.
+    :param is_zip: [bool] Si le document téléchargé est un zip
+    :return: None
+    """
+    file = wget.download(download_url, name_of_file)
+    if is_zip:
+        with zipfile.ZipFile(file, 'r') as zip_ref:
+            zip_ref.extractall()
         
-        driver.find_element_by_id("user_pseudonym").send_keys(logIn)
-        driver.find_element_by_id("user_password").send_keys(mdp)
-        driver.find_element_by_id("login-btn").click()
-        
-def get_driver():
-    try:
-        driver = webdriver.Chrome()
-    except:
-        print_debug("[DRIVER] don't detect Chrome","yellow")
-        try:
-            driver = webdriver.Opera()
-        except:
-            print_debug("[DRIVER] don't detect Opera","yellow")
-            try:
-                driver = webdriver.Firefox() 
-            except:
-                print_debug("[DRIVER] Failed to detect driver","red")
-                pop_up(json.loads('{"text":"aucun moteur\\n de recherche detecté \\n(chrome, opera ou firefox)", "title":"VoltaireTaMere", "link":"https://www.google.com/intl/fr_fr/chrome/", "lock":true, "size":"180x90"}')).root.mainloop()
-                exit()
+        os.remove(file)
 
+def set_driver():
+    """
+    ############## description ##############\n
+    Initialise un driver selenium.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :return: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    """
+    driver= Chrome()
     driver.implicitly_wait(1)
+    with open("file/xpath.json", "r", encoding="utf-8") as f:
+        json_data = json.loads(f.read())
+        driver.scopes = json_data["name_of_package"]
     return driver
 
-def init_verif(driver, parent=None):
-    driver.get("https://sites.google.com/view/voltairetamere/init")
-    cmd = json.loads(driver.find_element_by_class_name("yaqOZd").text)
+def update_driver():
+    """
+    ############## description ##############\n
+    Update le driver en téléchargeant sa nouvelle versions.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :return: None
+    """
+    response = requests.get('https://chromedriver.storage.googleapis.com/LATEST_RELEASE')
+    version_number = response.text
+    download_url = "https://chromedriver.storage.googleapis.com/" + version_number +"/chromedriver_win32.zip"
+    download_file(download_url, "chromedriver.zip", True)
+
+
+def get_init_data(driver):
+    """
+    ############## description ##############\n
+    Renvoie un dictionnaire avec les données d'initialisation collectées sur la page de buffering du site.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :return: [dict] données d'initialisation.
+    """
     driver.get("https://sites.google.com/view/voltairetamere/load")
-    print(cmd.get("version"), found_data("./file/version.txt", "version"))
-    if cmd.get("version") != found_data("./file/version.txt", "version"):
-        pp_cmd = {"text":"VoltaireTaMere doit être\\n mis à jour", "title":"VoltaireTaMere", "link":"https://sites.google.com/view/voltairetamere/accueil", "lock":True, "size":"180x70"}
-        pop_up(pp_cmd, parent).root.mainloop()
-        exit()
+    text = driver.find_element_by_xpath("html/body").text
+    init_data = json.loads(text[text.find(":start:")+7: text.find(":end:") ])
+    print(init_data)
+    return init_data
+
+def init(driver, loading_screen):
+    """
+    ############## description ##############\n
+    Se charge de l'initialisation générale:
+
+    -:Vérifie la version et met à jour le logiciel.
+    -:Met à jours directement le fichier des xpath (chemin pour le web browsing).
+    -:Affiche une pop-up si indiquer dans les données d'initialisation.
+    -:Verrouille le programme pour maintenance.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :param loading_screen: [Tkinter widget] Barre de chargement de l'écran de chargement.
+    :return: None
+    """
+    loading_screen.next_process("getting init data...", 50) #affichage du chargement
+    init_data = get_init_data(driver) #Récupération des données d'Init
+
+    with open("file/version.json", "r", encoding="utf-8") as f:
+        version = json.loads(f.read())
+
+        loading_screen.next_process("looking for update...", 60)
+        if version["version"] != init_data["version"]["tag"]: #vérification de la verion
+            #Mise à jour
+            loading_screen.next_process("downloading new version...", 70)
+            driver.close()
+            print("[init] wrong versions use updating")
+            download_file(init_data["version"]["link"], init_data["version"]["name"], init_data["version"]["zip"])
+            loading_screen.next_process("updating...", 100)
+            loading_screen.root.destroy()
+            try:
+                os.startfile(init_data["version"]["name"])
+            except:
+                pass
+            print("[init] quiting...")
+            sys.exit()
     
-    if cmd.get("title"):
-        pop_up(cmd).root.mainloop()
-        if cmd.get("lock"):
-            exit()
+    loading_screen.next_process("updating xpath file...", 80)
+    #Mise à jour du fichier xpath
+    try:
+        with open("file/xpath.json", "w", encoding="utf-8") as f:
+            json.dump(init_data["xpath"], f)
+    except Exception as e:
+        #En cas d'échec chargent les données xpath dans save Json a la place
+        print(e)
+        print("[init] failed updating xpath.json")
+        loading_screen.next_process("failed to update xpath, using re writting data...", 90)
+        with open("file/xpath.json", "w", encoding="utf-8") as f:
+            with open("file/save.json", "r", encoding="utf-8") as f2:
+                save =  json.loads( f2.read() )
+            
+            json.dump(save["xpath"], f)
+    
+    loading_screen.next_process("Done", 100)#affichage du chargement
+    sleep(0.5)
+    loading_screen.root.destroy()
+
+    #affichage de la pop-up si elle est dans les données d'init
+    if init_data.get("pop_up"):
+        with open("file/buffer.json", "w", encoding="utf-8") as f: #buffering des données json de la pop_up
+            json.dump(init_data["pop_up"]["widget"], f)
+        
+        root = tkgen.gengui.TkJson("file/buffer.json", title=init_data["pop_up"]["title"]) #génération de la pop_up via le json du fichier buffer
+        root.geometry(init_data["pop_up"]["size"])
+        root.resizable(False, False)
+        root.iconbitmap("asset/VoltaireTaMere_icon[ICO].ico")
+        root.configure(bg=init_data["pop_up"]["BG"])
+
+        if init_data["pop_up"].get("link"):
+            root.button('open_link', lambda: [webbrowser.open_new(init_data["pop_up"]["link"]), root.destroy()])
+        if init_data["pop_up"].get("close"):
+            root.button(init_data["pop_up"]["close"], root.destroy)
+        
+        root.mainloop()
+
+    #verrouillage si maintenance
+    if init_data.get("lock") == True: 
+        sys.exit()
+    
+
+def auto_login(driver):
+    """
+    ############## description ##############\n
+    Exécute la connexion automatique au projet Voltaire.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :return: None
+    """
+    
+    #Récupération des informations de connexion
+    with open("./file/login.json", "r", encoding="utf-8") as f:
+        login_json = json.loads(f.read())
+    
+    driver.get(login_json["link"])
+
+    if login_json["auto_login"]:
+        with open("./file/xpath.json", "r", encoding="utf-8") as f:
+            xpath = json.loads(f.read())
+
+        try:
+            #remplit les informations de connexion sur le projet Voltaire
+            driver.find_element_by_xpath(xpath["mail"]).send_keys(login_json["mail"])
+            driver.find_element_by_xpath(xpath["mdp"]).send_keys(login_json["mdp"])
+            driver.find_element_by_xpath(xpath["connect_button"]).click()
+        except Exception as e:
+            print(e)
+            pass

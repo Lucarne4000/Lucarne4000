@@ -1,491 +1,768 @@
-import os, json
-from tkinter import Button, Label, Tk, Entry, Listbox, Text, Menubutton, Menu, PhotoImage, StringVar, IntVar, Toplevel
-from time import sleep
-from module import Module
-from file_function import print_debug, found_data, write_data
-from init_function import connect
-from routine import BOT, MANUAL
-from threading import Thread
-from Question import auto_learning
+#  __     __            __    __                __                   ________          __       __                               
+# |  \   |  \          |  \  |  \              |  \                 |        \        |  \     /  \                              
+# | $$   | $$  ______  | $$ _| $$_     ______   \$$  ______    ______\$$$$$$$$______  | $$\   /  $$  ______    ______    ______  
+# | $$   | $$ /      \ | $$|   $$ \   |      \ |  \ /      \  /      \ | $$  |      \ | $$$\ /  $$$ /      \  /      \  /      \ 
+#  \$$\ /  $$|  $$$$$$\| $$ \$$$$$$    \$$$$$$\| $$|  $$$$$$\|  $$$$$$\| $$   \$$$$$$\| $$$$\  $$$$|  $$$$$$\|  $$$$$$\|  $$$$$$\
+#   \$$\  $$ | $$  | $$| $$  | $$ __  /      $$| $$| $$   \$$| $$    $$| $$  /      $$| $$\$$ $$ $$| $$    $$| $$   \$$| $$    $$
+#    \$$ $$  | $$__/ $$| $$  | $$|  \|  $$$$$$$| $$| $$      | $$$$$$$$| $$ |  $$$$$$$| $$ \$$$| $$| $$$$$$$$| $$      | $$$$$$$$
+#     \$$$    \$$    $$| $$   \$$  $$ \$$    $$| $$| $$       \$$     \| $$  \$$    $$| $$  \$ | $$ \$$     \| $$       \$$     \
+#      \$      \$$$$$$  \$$    \$$$$   \$$$$$$$ \$$ \$$        \$$$$$$$ \$$   \$$$$$$$ \$$      \$$  \$$$$$$$ \$$        \$$$$$$$
 
-class GUI:
-    def __init__(self,driver):
+#################################################################################################################################                                                                                                                           
+#                                              Fichier contenant le GUI                                                         #
+#################################################################################################################################                                                                                                                           
+
+from tkinter import Entry, StringVar, IntVar, Tk, PhotoImage, Button, Text, Label, Scrollbar
+import json
+from data import DATA, extract_str_reponses_from_driver
+from init import auto_login
+from routine import auto_mode_routine, manuel_mode_routine
+from threading import Thread
+from time import sleep
+import os
+import webbrowser
+
+from vr_file_prcs import vr_file_root
+    
+class VTM_gui:
+    """
+    ############## description ##############\n
+    Classe qui contient les différents GUI (Login et Main) et rassemble les données générées et requises par les scripts
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    """
+    ###################################################################################################
+    #                                        Constructeur                                             #
+    ###################################################################################################
+    def __init__(self, driver):
+
+        #tkinter window basic set-up
         self.root = Tk()
         self.root.title("VoltaireTaMere")
         self.root.resizable(False, False)
-        self.root.geometry('600x350')
-        self.root.iconphoto(True, PhotoImage(file = "asset\\VoltaireTaMere_icon[PNG].png"))
-        self.root.configure(bg='#23272A')
+        self.root.iconbitmap("asset/VoltaireTaMere_icon[ICO].ico")
+        self.root.configure(bg='#202020')
         
-        self.Auto_off = PhotoImage(file = "asset\\Boutton_Auto_off.png")
-        self.Auto_on = PhotoImage(file = "asset\\Boutton_Auto_on.png")
-        self.Manual = PhotoImage(file = "asset\\Boutton_Manuel.png")
-        self.back = PhotoImage(file = "asset\\Boutton_Retour.png")
-        self.load_file = PhotoImage(file = "asset\\Boutton_Load.png")
-        self.Quitter = PhotoImage(file = "asset\\boutton_Quitter.png")
-        self.BG1 = PhotoImage(file = "asset\\Menu_1.png")
-        self.BG2 = PhotoImage(file = "asset\\Menu_2.png")
-        self.BG3 = PhotoImage(file = "asset\\Menu_3.png")
-
+        #driver
         self.driver = driver
-        self.module = Module("")
-        self.bot_on = False
+
+        #contient les données extraitent par les algorithme
+        self.data_base = None
+
+        #variable lier au robot
+        self.bot_state = False
+
+        ###################################################################################################
+        #                                       Login window                                              #
+        ###################################################################################################
+
+        self.Login_fond_image = PhotoImage(file= "asset/Login_Menu.png")
+        self.btn_connect_idt_image = PhotoImage(file= "asset/Connect_idt_boutton.png")
+        self.btn_connect_link_image = PhotoImage(file= "asset/Connect_link_boutton.png")
+        self.btn_no_connect_image = PhotoImage(file= "asset/No_connect_boutton.png")
+        self.btn_enregistrer_image = PhotoImage(file= "asset/Enregistrer_boutton.png")
+        self.text_login_image = PhotoImage(file= "asset/text_login.png")
+
+        #tkinter variables login window
+        self.user_mail = StringVar()
+        self.user_mdp = StringVar()
+        self.user_link = StringVar()
+
+        #initialise les variables Tkinter contenant les informations de connexion
+        with  open("./file/login.json", "r", encoding="utf-8") as f:    
+            json_data = json.loads(f.read())
+            self.user_mail.set(json_data["mail"])
+            self.user_mdp.set(json_data["mdp"])
+            self.user_link.set(json_data["link"])
+
+        self.Login_fond = Label(self.root, image=self.Login_fond_image)
+
+        #text
+        self.text_login = Label(self.root, image=self.text_login_image, bg="#202020")
+
+        #retour à l'écran de choix du type de connexion
+        self.btn_go_back_select_connect_mode = Button(self.root,
+            text="< retour",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#282828",
+            command=lambda: [self.unload_connect_with_login(), self.unload_connect_with_link(), self.load_login_window()],
+            bg="#282828",
+            fg="#ffffff",
+            font=('Helvetica', '10'))
+
+        #désactive la connexion automatique
+        self.no_login = Button(self.root,
+            image=self.btn_no_connect_image,
+            height=38,
+            width=306,
+            command=lambda: [self.save_json_login("https://www.projet-voltaire.fr/voltaire/com.woonoz.gwt.woonoz.Voltaire/Voltaire.html?returnUrl=www.projet-voltaire.fr/choix-parcours/&applicationCode=pv",
+                            0, "e-mail/identifiant", "Mot de passe"), self.unload_login_window(), self.load_main_gui_window()],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+        ############################# login connexion widget #############################
+
+        #connexion au projet Voltaire via des identifiants (classique)
+        self.btn_connect_with_login = Button(self.root,
+            image=self.btn_connect_idt_image,
+            height=38,
+            width=306,
+            command=self.load_connect_with_login,
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+        
+        #champs d'entrer du mail
+        self.user_mail_input = Entry(self.root, 
+            textvariable=self.user_mail,
+            width=28,
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            font=('Helvetica', '15'))
+        
+        #champs denter du mot de passe
+        self.user_mdp_input = Entry(self.root, 
+            textvariable=self.user_mdp,
+            width=28,
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            font=('Helvetica', '15'))
+        
+        ############################# link connexion widget #############################
+
+        #connexion au projet Voltaire via un lien
+        self.btn_connect_with_link = Button(self.root, 
+            image=self.btn_connect_link_image,
+            height=38,
+            width=306,
+            command=self.load_connect_with_link,
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+        #champs d'entrer du lien de connexion
+        self.user_link_input = Entry(self.root, 
+            textvariable=self.user_link,
+            width=50,
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            font=('Helvetica', '10'))
+
+        ################################# save json data #################################
+
+        #bouton d'enregistrement des données de connexion
+        self.btn_save_json = Button(self.root,
+            image=self.btn_enregistrer_image,
+            height=38,
+            width=197,
+            command=None,
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+        ###################################################################################################
+        #                                 VoltaireTaMere window                                           #
+        ###################################################################################################
+
+        self.VoltaireTaMere_fond_image = PhotoImage(file= "asset/VoltaireTaMere_Menu.png")
+        self.Auto_on_image = PhotoImage(file= "asset/Auto_on_boutton.png")
+        self.Auto_off_image = PhotoImage(file= "asset/Auto_off_boutton.png")
+        self.Manuel_image = PhotoImage(file= "asset/Manuel_boutton.png")
 
         self.accuracy = IntVar()
-        self.time_next = IntVar()
-        self.accuracy.set(found_data("./file/options.txt", "accuracy"))
-        self.time_next.set(found_data("./file/options.txt", "time"))
-        
-        self.number_q = 0
-        self.prgm = StringVar()
-        self.niveau = StringVar()
+        self.time_to_wait = IntVar()
 
-        self.fond = Label(self.root, image=None, bg= '#23272A')
-        self.btn_pont_sup = Button(self.root, text = "PONT\nSUPÉRIEUR",
-                            command=lambda : [self.prgm.set("pont_Supérieur"),
-                                                self.niveau.set("Niveau\\ 1 Niveau\\ 2 Niveau\\ 3 Niveau\\ 4 Niveau\\ 5 Niveau\\ 6 Niveau\\ 7 Niveau\\ 8 Test\\ Blanc"),
-                                                self.Menu_Unpack(),self.Menu_2(self.BG2)],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 6,
-                            width = 12,
-                            font=('Helvetica', '10',"bold"))
-        self.btn_sup = Button(self.root, text = "SUPÉRIEUR",
-                            command=lambda : [self.prgm.set("Supérieur"), 
-                                                self.niveau.set("Niveau\\ 1 Niveau\\ 2 Niveau\\ 3 Niveau\\ 4 Niveau\\ 5 Niveau\\ 6 Niveau\\ 7 Niveau\\ 8 Niveau\\ 9 Niveau\\ 10 Test\\ Blanc"), 
-                                                self.Menu_Unpack(), self.Menu_2(self.BG2)],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 6,
-                            width = 12,
-                            font=('Helvetica', '10',"bold"))
-        self.btn_exc = Button(self.root, text = "EXCELLENCE",
-                            command=lambda : [self.prgm.set("Excellence"),
-                                                self.niveau.set("Atrée Agamemnon Clytemnestre Égisthe Ménélas Hélène Alétès Hermione Oreste Chrysotémis Électre Iphigénie Verbes\\ pronominaux\\ I Verbes\\ Pronominaux\\ II"), 
-                                                self.Menu_Unpack(), self.Menu_2(self.BG2)],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 6,
-                            width = 12,
-                            font=('Helvetica', '10',"bold"))
-        self.btn_cus = Button(self.root, text = "CUSTOM",
-                            bg="#a2d417",
-                            command=lambda :[self.prgm.set("CUS"),self.niveau.set(""),self.Menu_Unpack(),self.Menu_3(self.BG3)],
-                            activebackground  ="#ffffff",
-                            bd=0,
-                            height = 6,
-                            width = 12,
-                            font=('Helvetica', '10',"bold"))
-        self.btn_auto =  Button(self.root, 
-                        image=self.Auto_off,
-                        command= self.switch_bot,
-                        bg="#a2d417",
-                        activebackground  ="#a2d417",
-                        bd=0)
-        self.btn_manual =  Button(self.root, 
-                        image=self.Manual,
-                        command= lambda: Thread(target=self.ROUTINE_MANUAL).start(),
-                        bg="#23272A",
-                        activebackground  ="#23272A",
-                        bd=0)
-        self.btn_load_file =  Button(self.root, 
-                        image=self.load_file,
-                        command=self.init_module,
-                        bg="#23272A",
-                        activebackground  ="#23272A",
-                        bd=0)
-        self.btn_back =  Button(self.root, 
-                        image=self.back,
-                        command=lambda: [self.Menu_Unpack(),self.Menu_1(self.BG1)],
-                        bg="#23272A",
-                        activebackground  ="#23272A",
-                        bd=0)
-        self.btn_quit =  Button(self.root, 
-                        image=self.Quitter,
-                        command=self.root.destroy,  
-                        bg="#23272A",
-                        activebackground  ="#23272A",
-                        bd=0)
-        self.listB_Module = Listbox(self.root,
-                        exportselection=0,
-                        listvariable = self.niveau, 
-                        selectmode = "single",
-                        activestyle = "none",
-                        height = 14,
-                        width = 21,
-                        bd = 0,
-                        bg = "#2C2F33",
-                        fg = "#ffffff",
-                        selectbackground = "#a2d417",
-                        font=('Helvetica', '10'))
-        self.log = Text (self.root,
-                        height = 12,
-                        width=47,
-                        bg="#2C2F33",
+        #initialise les variables Tkinter contenant les options
+        with  open("./file/options.json", "r", encoding="utf-8") as f:    
+            options = json.loads(f.read())
+            self.accuracy.set(options.get("accuracy"))
+            self.time_to_wait.set(options.get("time"))
+
+        self.VoltaireTaMere_fond = Label(self.root, image=self.VoltaireTaMere_fond_image)
+
+        #démarre la routine Automatique
+        self.btn_auto_mode = Button(self.root,
+            image=self.Auto_off_image,
+            height=42,
+            width=159,
+            command=lambda: [self.set_data(), self.switch_auto_routine()],
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#282828",
+            font=('Helvetica', '10'))
+            
+        #démarre la routine Manuel
+        self.btn_manual_mode = Button(self.root,
+            image=self.Manuel_image,
+            height=42,
+            width=159,
+            command=lambda: [self.set_data(), Thread(target=self.MANUAL_ROUTINE).start()],
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#282828",
+            font=('Helvetica', '10'))
+
+
+        #entrée pour changer la précision du robot
+        self.entry_accuracy = Entry(self.root, 
+            textvariable=self.accuracy,
+            width=10,
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            font=('Helvetica', '10'))
+        
+        #entrée pour changer le temps d'attente du robot
+        self.entry_time = Entry(self.root, 
+            textvariable=self.time_to_wait,
+            width=10,
+            bg="#282828",
+            fg="#ffffff",
+            bd=0,
+            font=('Helvetica', '10'))
+
+        #zone d'affichage des logs sur l'interface graphique
+        self.text_on_screen = Text(self.root,
+                        undo = True,
+                        height = 11,
+                        width=76,
+                        bg="#282828",
                         fg="#ffffff",
                         bd=0,
                         font=('Helvetica', '10'))
-        self.log.tag_config("green",foreground = "#40ff46")
-        self.log.tag_config("red",foreground = "#ff4040")
-        self.log.tag_config("yellow", foreground = "#f5ff40")
-        self.log.tag_config("cyan", foreground = "#00ffff")
-        self.log.tag_config("magenta", foreground = "#ff00ff")
-        self.log.tag_config("white", foreground = "#ffffff")
-        self.menuAide = Menubutton(self.root, 
-                            text='Aide', 
-                            width='6', 
-                            fg='#ffffff',
-                            bg='#2c2e30', 
-                            activebackground='#a2d417',
-                            bd = 0)
-        self.SousMenuAide = Menu(self.menuAide, fg='#ffffff', bg='#2c2e30',activebackground='#a2d417')
-        self.SousMenuAide.add_command(label='Notice', command = lambda: os.startfile(".\\file\\NOTICE.pdf"))
-        self.SousMenuAide.add_command(label='réinitialiser Login', command = lambda: [Login(self.driver, self.root)])
-        self.menuAide.configure(menu=self.SousMenuAide)
 
-        self.menuOption = Menubutton(self.root, 
-                            text='Option', 
-                            width='6', 
-                            fg='#ffffff',
-                            bg='#2c2e30', 
-                            activebackground='#a2d417',
-                            bd = 0)
-        self.SousMenuOption = Menu(self.menuOption, fg='#ffffff', bg='#2c2e30',activebackground='#a2d417')
-        self.SousMenuOption.add_command(label='OverClock', command = lambda : [self.time_next.set(1), print_debug("[MAIN] Overclock ON", "yellow"), 
-                                                                            self.log.insert("end","Overclock ON\n", "yellow")])
-        self.SousMenuOption.add_command(label='options', command = lambda : [self.Menu_Unpack(), self.Menu_4()])
-        self.menuOption.configure(menu=self.SousMenuOption)
-        self.option_auto_login = Button(self.root, text = "auto login",
-                            command=lambda : [self.log.delete(1.0,"end"), self.input_data.place_forget(),
-                                            self.log.insert("end", "L'auto login permet de se connecter automatiquement a son compte projet voltaire lors du démarage"),
-                                            self.switch_auto_login.place(x=320, y=30)],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 2,
-                            width = 20,
-                            font=('Helvetica', '10'))
-        self.option_accuracy = Button(self.root, text = "précision",
-                            command=lambda : [self.switch_auto_login.place_forget(), self.log.delete(1.0,"end"), 
-                                            self.set_accurate_buffer(), self.input_data.place(x=320, y=30),
-                                            self.log.insert("end","Définit le pourcentage de bonnes réponses")],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 2,
-                            width = 20,
-                            font=('Helvetica', '10'))
-        self.option_time = Button(self.root, text = "temps d'attente",
-                            command=lambda : [self.switch_auto_login.place_forget(), self.log.delete(1.0,"end"), 
-                                            self.set_time_buffer(), self.input_data.place(x=320, y=30),
-                                            self.log.insert("end","définit le temps d'attente entre chaque question")],
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 2,
-                            width = 20,
-                            font=('Helvetica', '10'))
+        self.text_on_screen.tag_config("green",foreground = "#a2d417")
+        self.text_on_screen.tag_config("red",foreground = "#ff4040")
+        self.text_on_screen.tag_config("yellow", foreground = "#f5ff40")
+        self.text_on_screen.tag_config("cyan", foreground = "#00ffff")
+        self.text_on_screen.tag_config("magenta", foreground = "#ff00ff")
+        self.text_on_screen.tag_config("white", foreground = "#ffffff")
 
-        self.switch_auto_login = Button(self.root, text = "",
-                            command=None,
-                            bg="#a2d417",
-                            highlightthickness=2,
-                            bd=0,
-                            height = 1,
-                            width = 10,
-                            font=('Helvetica', '10'))
+        ###################################################################################################
+        #                                       Aide window                                               #
+        ###################################################################################################
+        self.Aide_fond_image = PhotoImage(file="asset/Aide_Menu.png")
+        self.btn_change_connexion_image = PhotoImage(file="asset/Change_connexion_boutton.png")
+        self.btn_notice_image = PhotoImage(file="asset/Ouvrir_notice_boutton.png")
+        self.btn_FAQ_image = PhotoImage(file="asset/Lien_FAQ_boutton.png")
+        self.btn_vr_file_image = PhotoImage(file="asset/vr_file_boutton.png")
 
-        self.time_buffer = StringVar()
-        self.time_buffer.set(found_data("./file/options.txt","time"))
-        self.accurate_buffer = StringVar()
-        self.accurate_buffer.set(found_data("./file/options.txt","accuracy"))
+        self.Aide_fond = Label(self.root, image=self.Aide_fond_image)
 
-        self.input_data = Entry (self.root,
-                            textvariable = None,
-                            bg="#2C2F33",
-                            fg="#ffffff",
-                            width = 11,
-                            bd=1,
-                            font=('Helvetica', '10')) 
-    
-    def auto_login_switch(self):
-        if found_data("./file/options.txt","auto_login"):
-            self.switch_auto_login["bg"] = "#a2d417"
-            self.switch_auto_login["text"] = "activer"
-            self.switch_auto_login["command"] = lambda: [write_data("./file/options.txt","auto_login",0), self.auto_login_switch()]
-        else:
-            self.switch_auto_login["bg"] = "#2C2F33"
-            self.switch_auto_login["text"] = "desactiver"
-            self.switch_auto_login["command"] = lambda: [write_data("./file/options.txt","auto_login",1), self.auto_login_switch()]
-
-    def Menu_1(self, BG):
-        self.fond["image"] = BG
-        self.fond.pack()
-        self.btn_pont_sup.place(x=22, y=170)
-        self.btn_sup.place(x=174, y=170)
-        self.btn_exc.place(x=326, y=170)
-        self.btn_cus.place(x=478, y=170)
-        self.btn_quit.place(x=478, y=307)
-        self.menuAide.place(x=555, y=0)
-        self.menuOption.place(x=510, y=0)
-    def Menu_2(self, BGaff):
-        self.fond["image"] = BGaff
-        self.log["width"] = 47
-        self.btn_auto["bg"] = "#a2d417"
-        self.btn_auto["activebackground"] = "#a2d417"
-        self.fond.pack()
-        self.btn_load_file.place(x=30, y=308)
-        self.btn_manual.place(x=255, y=60)
-        self.btn_auto.place(x=402, y=60)
-        self.btn_back.place(x=477, y=309)
-        self.log.place(x=255, y=105)
-        self.listB_Module.place(x=32, y=60)
-        self.listB_Module.selection_set(0)
-        self.menuAide.place(x=555, y=0)
-        self.menuOption.place(x=510, y=0)
-    def Menu_3(self, BGaff):
-        self.fond["image"] = BGaff
-        self.log["width"] = 79
-        self.btn_auto["bg"] = "#23272A"
-        self.btn_auto["activebackground"] = "#23272A"
-        self.fond.pack()
-        self.btn_load_file.place(x=30, y=308)
-        self.btn_manual.place(x=30, y=63)
-        self.btn_auto.place(x=156, y=63)
-        self.btn_back.place(x=477, y=309)
-        self.log.place(x=30, y=103)
-        self.menuAide.place(x=555, y=0)
-        self.menuOption.place(x=500, y=0)
-        os.startfile(".\\Modules\\Custom\\Module1.txt")
-    def Menu_4(self):
-        self.btn_back["command"] = lambda: [ self.Menu_Unpack(),self.Menu_1(self.BG1), 
-                                            write_data("./file/options.txt","time", self.time_buffer.get()),
-                                            write_data("./file/options.txt","accuracy", self.accurate_buffer.get()),
-                                            self.accuracy.set(found_data("./file/options.txt", "accuracy")),
-                                            self.time_next.set(found_data("./file/options.txt", "time"))]
-        self.auto_login_switch()
-        self.log["width"] = 58
-        self.log["bg"] = "#23272A"
-        self.btn_back.place(x=477, y=309)
-        self.menuAide.place(x=555, y=0)
-        self.option_auto_login.place(x=0, y=10)
-        self.option_accuracy.place(x=0, y=65)
-        self.option_time.place(x=0, y=120)
-        self.log.place(x=180, y=80)
-
-    def set_time_buffer(self):
-        self.input_data["textvariable"] = self.time_buffer
-    def set_accurate_buffer(self):
-        self.input_data["textvariable"] = self.accurate_buffer
-
-    def Menu_Unpack(self):
-        self.log["bg"] = "#2C2F33"
-        self.log.delete(1.0,"end")
-        self.bot_on = False
-        self.btn_auto["image"]= self.Auto_off
-        self.btn_back["command"] = lambda: [self.Menu_Unpack(),self.Menu_1(self.BG1)]
-        self.input_data.place_forget()
-        self.switch_auto_login.place_forget()
-        self.fond.pack_forget()
-        self.btn_load_file.place_forget()
-        self.btn_manual.place_forget()
-        self.btn_auto.place_forget()
-        self.btn_back.place_forget()
-        self.listB_Module.selection_clear(0,99)
-        self.listB_Module.place_forget()
-        self.log.place_forget()
-        self.btn_pont_sup.place_forget()
-        self.btn_sup.place_forget()
-        self.btn_exc.place_forget()
-        self.btn_cus.place_forget()
-        self.btn_quit.place_forget()
-        self.menuAide.place_forget()
-        self.menuOption.place_forget()
-        self.option_auto_login.place_forget()
-        self.option_accuracy.place_forget()
-        self.option_time.place_forget()
-
-    def init_module(self):
-        try:
-            self.driver.find_element_by_id("activityCellDiv_"+str(self.listB_Module.curselection()[0] + 1)).click()
-        except:
-            pass
-        try:
-            self.module = Module(".\\Modules\\"+ self.prgm.get() + "\\Module"+ str(self.listB_Module.curselection()[0] + 1)+ ".txt")
-        except:
-            self.module = Module(".\\Modules\\Custom\\Module1.txt")
+        #Boutton de changement de paramètre de connexion
+        self.btn_change_connexion = Button(self.root,
+            image=self.btn_change_connexion_image,
+            height=41,
+            width=376,
+            command= lambda: [ self.deconnect(), self.unload_aide_window(), self.load_login_window() ],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
         
-        if self.module.data == []:
-            self.log.insert("end","erreur aucun fichier chargé\n","red")
-        else:
-            self.log.insert("end","fichier correctement chargé\n","green")
+        #boutton qui ouvre la notice
+        self.btn_notice = Button(self.root,
+            image=self.btn_notice_image,
+            command= lambda: os.startfile("file\\Notice.pdf"),
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
 
-    def switch_bot(self):
-        if self.bot_on:
-            self.bot_on = False
-            self.btn_auto["image"]=self.Auto_off
-        elif self.module.data != []:
-            self.bot_on = True
-            self.btn_auto["image"]=self.Auto_on
-            self.td = Thread(target=self.ROUTINE_BOT)
-            self.td.start()
-        else:
-            self.log.insert("end","erreur aucun fichier chargé\n","red")
-            print_debug("AUCUN  FICHIER CHARGÉ","red")
+        #boutton qui ouvre la FAQ
+        self.btn_FAQ = Button(self.root,
+            image=self.btn_FAQ_image,
+            height=41,
+            width=376,
+            command= lambda: webbrowser.open_new("https://sites.google.com/view/voltairetamere/faq"),
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+        
+        #boutton qui lance la vérification des fichiers
+        self.btn_vr_file = Button(self.root,
+            image=self.btn_vr_file_image,
+            height=41,
+            width=376,
+            command= lambda: vr_file_root(self.root).vr_file(),
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
 
-    def ROUTINE_BOT(self):
+        ###################################################################################################
+        #                                       Contact window                                            #
+        ###################################################################################################
+
+        self.Contact_fond_image = PhotoImage(file="asset/Contact_Menu.png")
+        self.btn_discord_image = PhotoImage(file="asset/Discord_boutton.png")
+        self.btn_paypal_image = PhotoImage(file="asset/Paypal_boutton.png")
+        self.btn_site_image = PhotoImage(file="asset/Site_boutton.png")
+
+        self.Contact_fond = Label(self.root, image=self.Contact_fond_image)
+
+        #boutton qui copie le pseudo discord (si tu vois ça passes me faire un coucou parce que tu dois saigner de yeux tellement c'est le bordel)
+        self.btn_discord = Button(self.root,
+            image=self.btn_discord_image,
+            height=38,
+            width=306,
+            command= lambda: [self.root.clipboard_append("Kim Jung Hun#3359"),self.root.update()],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+        
+        #boutton qui ouvre le paypal
+        self.btn_paypal = Button(self.root,
+            image=self.btn_paypal_image,
+            height=38,
+            width=171,
+            command= lambda: webbrowser.open_new("https://www.paypal.com/donate/?hosted_button_id=9UD2QHXB4DEYC"),
+            bg="#a2d417",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#a2d417",
+            font=('Helvetica', '10'))
+
+        #boutton qui ouvre le site
+        self.btn_site = Button(self.root,
+            image=self.btn_site_image,
+            height=38,
+            width=241,
+            command= lambda: webbrowser.open_new("https://sites.google.com/view/voltairetamere/voltairetamere"),
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+        ###################################################################################################
+        #                              VoltaireTaMere top navigation rod                                  #
+        ###################################################################################################
+        self.VoltaireTaMere_select_image = PhotoImage(file= "asset/VoltaireTaMere_select_boutton.png")
+        self.VoltaireTaMere_unselect_image = PhotoImage(file= "asset/VoltaireTaMere_unselect_boutton.png")
+        self.Aide_select_image = PhotoImage(file= "asset/Aide_select_boutton.png")
+        self.Aide_unselect_image = PhotoImage(file= "asset/Aide_unselect_boutton.png")
+        self.Contact_select_image = PhotoImage(file= "asset/Contact_select_boutton.png")
+        self.Contact_unselect_image = PhotoImage(file= "asset/Contact_unselect_boutton.png")
+
+        #Boutton qui affiche la fenêtre VoltaireTaMere
+        self.btn_go_to_VoltaireTaMere = Button(self.root,
+            image= self.VoltaireTaMere_select_image,
+            height=25,
+            width=129,
+            command= lambda: [self.unload_aide_window(), self.unload_contact_window(), self.load_main_gui_window()],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+        
+        #Boutton qui affiche la fenêtre Aide
+        self.btn_go_to_Aide = Button(self.root,
+            image= self.Aide_select_image,
+            height=24,
+            width=39,
+            command= lambda: [self.unload_main_gui_window(), self.unload_contact_window(), self.load_aide_window()],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+        #Boutton qui affiche la fenêtre Contact
+        self.btn_go_to_Contact = Button(self.root,
+            image= self.Contact_select_image,
+            height=25,
+            width=68,
+            command= lambda: [self.unload_main_gui_window(), self.unload_aide_window(), self.load_contact_window()],
+            bg="#202020",
+            fg="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            activebackground="#202020",
+            font=('Helvetica', '10'))
+
+    ###################################################################################################
+    #                                       Login fonction                                            #
+    ###################################################################################################
+
+    def load_login_window(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.root.geometry('400x500')
+        self.Login_fond.pack()
+        self.text_login.place(x=41, y=229)
+        self.btn_connect_with_login.place(x=47, y=267)
+        self.btn_connect_with_link.place(x=47, y=345)
+        self.no_login.place(x=47, y=423)
+
+    def unload_login_window(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Login_fond.pack_forget()
+        self.text_login.place_forget()
+        self.btn_connect_with_login.place_forget()
+        self.btn_connect_with_link.place_forget()
+        self.no_login.place_forget()
+    
+    def load_connect_with_login(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.unload_login_window()
+        self.Login_fond.pack()
+        self.btn_save_json["command"] = lambda: [self.save_json_login("https://www.projet-voltaire.fr/voltaire/com.woonoz.gwt.woonoz.Voltaire/Voltaire.html?returnUrl=www.projet-voltaire.fr/choix-parcours/&applicationCode=pv",
+                                        1, self.user_mail.get(), self.user_mdp.get()), self.unload_connect_with_login(), self.load_main_gui_window()]
+        self.user_mail_input.place(x=47, y=250)
+        self.user_mdp_input.place(x=47, y=310)
+        self.btn_save_json.place(x=103, y=383)
+        self.btn_go_back_select_connect_mode.place(x=10, y=10)
+    
+    def unload_connect_with_login(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Login_fond.pack_forget()
+        self.user_mail_input.place_forget()
+        self.user_mdp_input.place_forget()
+        self.btn_save_json.place_forget()
+        self.btn_go_back_select_connect_mode.place_forget()
+    
+    def load_connect_with_link(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.unload_login_window()
+        self.Login_fond.pack()
+        self.btn_save_json["command"] = lambda: [self.save_json_login(self.user_link.get(), 0, None, None), self.unload_connect_with_link(), self.load_main_gui_window()]
+        self.user_link_input.place(x=22, y=240)
+        self.btn_save_json.place(x=103, y=300)
+        self.btn_go_back_select_connect_mode.place(x=10, y=10)
+    
+    def unload_connect_with_link(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Login_fond.pack_forget()
+        self.user_link_input.place_forget()
+        self.btn_save_json.place_forget()
+        self.btn_go_back_select_connect_mode.place_forget()
+
+    def save_json_login(self, link, auto_login_value, mail, mdp):
+        """
+        ############## description ##############\n
+        Enregistre les données entrer par l'utilisateur.
+
+        ######### parametre(s) et resultat(s) #########\n
+        :param link: [str] lien utilisé pour la connexion.
+        :param auto_login_value: [str] vrai si l'auto-login est activé.
+        :param mail: [str] identifiant de l'utilisateur.
+        :param mdp: [str] mot de passe de l'utilisateur.
+        :return: None
+        """
+        f_login = open("./file/login.json", "r", encoding="utf-8")
+        json_data = json.loads(f_login.read())
+        f_login.close()
+        json_data["link"] = link
+        json_data["auto_login"] = auto_login_value
+        json_data["mail"] = mail
+        json_data["mdp"] = mdp
+        json_data["is_defined"] = 1
+        f_login = open("./file/login.json", "w", encoding="utf-8")
+        json.dump(json_data, f_login)
+        f_login.close()
+        auto_login(self.driver) #reconnexion
+
+    ###################################################################################################
+    #                                  VoltaireTaMere fonction                                        #
+    ###################################################################################################
+    
+    def load_main_gui_window(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.root.geometry('600x490')
+        self.VoltaireTaMere_fond.pack()
+        self.btn_go_to_VoltaireTaMere["height"] = 25
+        self.btn_go_to_VoltaireTaMere["image"] = self.VoltaireTaMere_select_image
+        self.btn_go_to_VoltaireTaMere.place(x=27, y=20)
+        self.btn_go_to_Aide["height"] = 15
+        self.btn_go_to_Aide["image"] =  self.Aide_unselect_image
+        self.btn_go_to_Aide.place(x=174, y=20)
+        self.btn_go_to_Contact["height"] = 14
+        self.btn_go_to_Contact["image"] = self.Contact_unselect_image
+        self.btn_go_to_Contact.place(x=232, y=21)
+        self.btn_auto_mode.place(x=26, y=99)
+        self.btn_manual_mode.place(x=26, y=144)
+        self.entry_accuracy.place(x=381,y=110)
+        self.entry_time.place(x=381,y=160)
+        self.text_on_screen.place(x=29, y=277)
+    
+    def unload_main_gui_window(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.VoltaireTaMere_fond.pack_forget()
+        self.btn_go_to_VoltaireTaMere.place_forget()
+        self.btn_go_to_Aide.place_forget()
+        self.btn_go_to_Contact.place_forget()
+        self.btn_auto_mode.place_forget()
+        self.btn_manual_mode.place_forget()
+        self.entry_accuracy.place_forget()
+        self.entry_time.place_forget()
+        self.text_on_screen.place_forget()
+
+    def set_data(self):
+        """
+        ############## description ##############\n
+        Initialise les variables avant le lancement d'une routine. Update data_base uniquement si de nouvelles données sont chargées.
+        """
+        print("\n")
+        brut_data= extract_str_reponses_from_driver(self.driver) #recuperation des données "brute" installer par le driver
+        if brut_data != "":
+            new_data_base = DATA(brut_data)  #construit la nouvelle base de données
+            if new_data_base.extracted_data != []: #Mets à jour uniquement si de données ont été chargées
+                print("[set_data] new DATA set\n")
+                self.data_base = new_data_base
+            else:
+                print("[set_data] No new DATA\n")
+        
+        #Mets à jours tous les valeurs des options dans les fichiers
+        with  open("./file/options.json", "r", encoding="utf-8") as f: 
+            options = json.loads(f.read())
+        
         if self.accuracy.get() < 0:
             self.accuracy.set(0)
-            write_data("./file/options.txt","accuracy",0)
-            print_debug("[option] accuracy valeur interdite", "red")
-        if self.time_next.get() < 1:
-            self.time_next.set(1)
-            write_data("./file/options.txt","time",1)
-            print_debug("[option] time valeur interdite", "red")
-        print(self.accuracy.get(), self.time_next.get())
+        if self.accuracy.get() >100:
+            self.accuracy.set(100)
+        
+        if self.time_to_wait.get() < 1:
+            self.time_to_wait.set(1)
 
+        options["accuracy"] = self.accuracy.get()
+        options["time"] = self.time_to_wait.get()
 
-        while self.bot_on:
-            self.log.delete(1.0,"end")
+        with  open("./file/options.json", "w", encoding="utf-8") as f:    #sauvegarder les options
+            json.dump(options, f)
+    
+    def switch_auto_routine(self):
+        """
+        ############## description ##############\n
+        S'occupe d'être un interrupteur on/off
+        
+        ON: Lance la routine automatique sur un second thread
+        """
+        if self.bot_state:
+            self.bot_state = False
+            self.btn_auto_mode["image"] = self.Auto_off_image
+        else:
+            self.bot_state = True
+            self.btn_auto_mode["image"] = self.Auto_on_image
+            Thread(target=self.AUTO_ROUTINE).start()
+
+        print("[switch_auto_routine] bot set as", self.bot_state)
+
+    def AUTO_ROUTINE(self):
+        """
+        ############## description ##############\n
+        Routine du robot, tourne en boucle tant que bot_state == True
+        """
+        self.driver.implicitly_wait(0)
+        with  open("./file/options.json", "r", encoding="utf-8") as f:    #recupere les options
+            options = json.loads(f.read())
+
+        print("[AUTO_ROUTINE] started with accuracy=",options.get("accuracy"),", and time=", options.get("time"))
+
+        #tant que le bot est en fonctionnement
+        while self.bot_state:
+            self.text_on_screen.delete(1.0,"end")
+            self.text_on_screen.insert("end","Localisation de l'erreur en cours...\n","green")
+
             try:
-                return_tag = BOT(self.driver, self.module, self.accuracy.get())
-            except:
-                return_tag = ["stop"]
-                print("[ROUTINE_BOT] crash happend or working terminated")
-                self.bot_on = False
+                result = auto_mode_routine(self.data_base, self.driver, options.get("accuracy")) #Réponds à une question
+            except Exception as e:
+                #Erreur non prévue
+                print("################# EXCEPTION RAISE #################")
+                print(e)
+                print("###################################################")
+                result = -1
 
-            print_debug("return_tag: "+str(return_tag)+"\n","yellow")
-            if type(return_tag) != list:
-                if return_tag == "feature_in":
-                    self.log.insert("end","Merci de fermer la Pop-up\n","yellow")
-                elif "can't_touche" in return_tag:
-                    self.log.insert("end","Je n'arrive pas a toucher: "+ return_tag[return_tag.index("&")+1 : len(return_tag)] +"\n","yellow")
-                elif return_tag == "not_found":
-                    self.log.insert("end","je trouve pas sorry UwU\n","yellow")  
+            if result == -1: #signale une erreur
+                print("[AUTO_ROUTINE] ^^^ crash happend ^^^\n")
+                self.text_on_screen.delete(1.0,"end")
+                self.text_on_screen.insert("end","Oups quelque chose est arrivé.\n","red")
+                self.switch_auto_routine()
+                self.driver.implicitly_wait(1)
+                return None
+            elif result == -2: #souvent associer à un niveau terminé
+                self.switch_auto_routine()
+                self.driver.implicitly_wait(1)
                 break
             
-            self.number_q += 1
-            if self.module.test_blanc == False:
-                if self.driver.find_elements_by_xpath("//span[@title='Mauvaise réponse']") != [] and return_tag != ["auto_fail"] and return_tag != ["verbe_pron_I"]:
-                    text = self.driver.find_elements_by_xpath("//span[@class = 'answerWord']/span[@class = 'pointAndClickSpan']")[1].text
-                    if return_tag == []:
-                        auto_learning().add_match(self.driver.find_element_by_class_name("sentence").text, text)
-                    else:
-                        auto_learning().add_data(return_tag, text)
-                    self.log.insert("end","erreur détéctée apprentissage...\n","green")
-                
-                self.driver.find_element_by_class_name("nextButton").click()
+            self.text_on_screen.insert("end","Clique fait !!\nEn attente...\n","green")
 
-            self.log.insert("end","["+str(self.number_q)+"]: Clique fait !\n","green")
-            self.log.insert("end",open(".\\file\\VTMtext.txt","r",encoding="utf-8").read())
-            self.log.insert("end","\n\nWaiting...\n","green")
             i = 0
-            while i < self.time_next.get() and self.bot_on:
+            #enchaine des sleep(1) pour s'arrêter au plus vite si l'utilisateur désactive le robot
+            while i < options["time"] and self.bot_state:
+                self.text_on_screen.edit_separator()
+                self.text_on_screen.insert("end","temps restant: "+str(options["time"]-i),"green")
                 sleep(1)
                 i += 1
-
-        self.bot_on = False
-        self.btn_auto["image"]=self.Auto_off
-        self.time_next.set(found_data("./file/options.txt", "time"))
-        print_debug("[BOT_ROUTINE] I am a bot, and this action was performed automatically.\nI answered "+str(self.number_q)+" questions","green")
-        self.log.insert("end","I am a bot, and this action was performed automatically.\nI answered "+str(self.number_q)+" questions\n","green")
-        self.number_q = 0
-        return 0
-
-    def ROUTINE_MANUAL(self):
-        self.log.delete(1.0,"end")
-        return_tag = MANUAL(self.driver, self.module)
-        if return_tag == "feature_in":
-            self.log.insert("end","Merci de fermer la Pop-up\n","yellow")
-        elif return_tag == "not_found":
-            self.log.insert("end","je trouve pas sorry UwU\n","yellow")
-        elif return_tag == "no_error":
-            self.log.insert("end","pas de faute :D\n","green")
-        else:
-            self.log.insert("end","la faute est: "+ return_tag + "\n","green")
+                self.text_on_screen.edit_undo()
         
-        self.log.insert("end",open(".\\file\\VTMtext.txt","r",encoding="utf-8").read())
+        self.text_on_screen.delete(1.0,"end")
+        self.text_on_screen.insert("end","I am a bot, and this action was performed automatically.\n","green")
+        self.driver.implicitly_wait(1)
 
-class Login:
-    def __init__(self, driver, parent=None):
-        os.startfile(".\\file\\NOTICE.pdf")
-        if parent:
-            self.root = Toplevel(parent)
+    def MANUAL_ROUTINE(self):
+        """
+        ############## description ##############\n
+        Routine Manuel donne une réponse ponctuelle, lorsque l'on appuie sur le bouton.
+        """
+        self.driver.implicitly_wait(0)
+        self.text_on_screen.delete(1.0,"end")
+        self.text_on_screen.insert("end","Localisation de l'erreur en cours...\n","green")
+        result = manuel_mode_routine(self.data_base, self.driver) #Récupère la réponse à une question
+        if result == -1:
+            print("[ROUTINE_BOT] crash happend or working terminated\n")
+            self.text_on_screen.delete(1.0,"end")
+            self.text_on_screen.insert("end","Oups quelque chose est arrivé.\n","red")
+        elif result == -2:
+            self.text_on_screen.insert("end","Ya rien à faire ici.\n","green")
         else:
-            self.root = Tk()
-            self.root.iconphoto(True, PhotoImage(file = "asset\\VoltaireTaMere_icon[PNG].png"))
+            self.text_on_screen.insert("end",result+"\n","green")
+        self.driver.implicitly_wait(1)
 
-        self.driver = driver
-        self.root.title("VoltaireTaMere")
-        self.root.resizable(False, False)
-        self.root.geometry('240x180')
-        self.root.configure(bg='#23272A')
+    ###################################################################################################
+    #                                     Aide fonction                                               #
+    ###################################################################################################
 
-        self.flog = open(".\\file\\log.txt","w", encoding="utf-8")
-        self.User = StringVar()
-        self.Mdp = StringVar()
-        self.a = Label (self.root,
-            text="Entrée vos identifiants Projet Voltaire",
-            bg="#23272A",
-            fg="#ffffff",
-            font=('Helvetica', '10'))
-        self.a.place(x=12, y=10)
-        self.b = Label (self.root,
-                text="E-mail:",
-                bg="#23272A",
-                fg="#ffffff",
-                font=('Helvetica', '10'))
-        self.b.place(x=12, y=40)
-        self.c = Entry (self.root,
-                textvariable = self.User,
-                bg="#2C2F33",
-                fg="#ffffff",
-                width = 30,
-                bd=1,
-                font=('Helvetica', '10'))
-        self.c.place(x=15, y=65)
-        self.d = Label (self.root,
-                text="Mot de passe:",
-                bg="#23272A",
-                fg="#ffffff",
-                font=('Helvetica', '10'))
-        self.d.place(x=12, y=90)
-        self.e = Entry (self.root,
-                textvariable = self.Mdp,
-                bg="#2C2F33",
-                fg="#ffffff",
-                width = 30,
-                bd=1,
-                font=('Helvetica', '10'))
-        self.e.place(x=15, y=115)
-        self.f = Button (self.root,
-                text="Valider",
-                command= self.register,
-                fg="#ffffff",
-                bg="#8BC34A",
-                font=('Helvetica', '12'),
-                bd=0,)
-        self.f.place(x=15, y=145)
-        self.g = Button (self.root,
-                text="Désactiver",
-                command= self.unactive,
-                fg="#ffffff",
-                bg="#8BC34A",
-                font=('Helvetica', '12'),
-                bd=0,)
-        self.g.place(x=145, y=145)
+    def load_aide_window(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Aide_fond.pack()
+        self.btn_go_to_VoltaireTaMere["height"] = 15
+        self.btn_go_to_VoltaireTaMere["image"] = self.VoltaireTaMere_unselect_image
+        self.btn_go_to_VoltaireTaMere.place(x=27, y=20)
+        self.btn_go_to_Aide["height"] = 25
+        self.btn_go_to_Aide["image"] =  self.Aide_select_image
+        self.btn_go_to_Aide.place(x=174, y=20)
+        self.btn_go_to_Contact["height"] = 14
+        self.btn_go_to_Contact["image"] = self.Contact_unselect_image
+        self.btn_go_to_Contact.place(x=232, y=21)
+        self.btn_change_connexion.place(x=112, y=87)
+        self.btn_notice.place(x=112, y=170)
+        self.btn_FAQ.place(x=112, y=253)
+        self.btn_vr_file.place(x=112, y=336)
     
-    def register(self):
-        self.flog.write(json.dumps({"login":self.User.get(),"mdp":self.Mdp.get()}))
-        self.flog.close()
-        self.root.destroy()
-        connect(self.driver)
+    def unload_aide_window(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Aide_fond.pack_forget()
+        self.btn_go_to_VoltaireTaMere.place_forget()
+        self.btn_go_to_Aide.place_forget()
+        self.btn_go_to_Contact.place_forget()
+        self.btn_change_connexion.place_forget()
+        self.btn_notice.place_forget()
+        self.btn_FAQ.place_forget()
+        self.btn_vr_file.place_forget()
+
+    def deconnect(self):
+        """
+        ############## description ##############\n
+        Clique sur le boutton "deconnexion" si il peut. ça aussi c'est tres con comme fonction.
+        """
+        with open("./file/xpath.json", "r", encoding="utf-8") as f:
+            xpath = json.loads(f.read())
+        try:
+            self.driver.find_element_by_xpath(xpath["deconnect"]).click()
+        except:
+            pass
     
-    def unactive(self):
-        self.flog.write(json.dumps({"login":None,"mdp":None}))
-        write_data("./file/options.txt","auto_login", 0)
-        self.flog.close()
-        self.root.destroy()
+    ###################################################################################################
+    #                                    Contact fonction                                             #
+    ###################################################################################################
+
+    def load_contact_window(self):
+        """
+        ############## description ##############\n
+        Charge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Contact_fond.pack()
+        self.btn_go_to_VoltaireTaMere["height"] = 15
+        self.btn_go_to_VoltaireTaMere["image"] = self.VoltaireTaMere_unselect_image
+        self.btn_go_to_VoltaireTaMere.place(x=27, y=20)
+        self.btn_go_to_Aide["height"] = 15
+        self.btn_go_to_Aide["image"] =  self.Aide_unselect_image
+        self.btn_go_to_Aide.place(x=174, y=20)
+        self.btn_go_to_Contact["height"] = 24
+        self.btn_go_to_Contact["image"] = self.Contact_select_image
+        self.btn_go_to_Contact.place(x=232, y=21)
+        self.btn_discord.place(x=148, y=147)
+        self.btn_paypal.place(x=214, y=252)
+        self.btn_site.place(x=180, y=361)
+    
+    def unload_contact_window(self):
+        """
+        ############## description ##############\n
+        Decharge et configure des widgets. Voila. C'est tout. La fonction est tellement conne que je suis pas sur que ya vrm besoin de commentaire.
+        """
+        self.Contact_fond.pack_forget()
+        self.btn_go_to_VoltaireTaMere.place_forget()
+        self.btn_go_to_Aide.place_forget()
+        self.btn_go_to_Contact.place_forget()
+        self.btn_discord.place_forget()
+        self.btn_paypal.place_forget()
+        self.btn_site.place_forget()

@@ -1,172 +1,231 @@
-import difflib, json
-from file_function import print_debug, found_data
+#  __     __            __    __                __                   ________          __       __                               
+# |  \   |  \          |  \  |  \              |  \                 |        \        |  \     /  \                              
+# | $$   | $$  ______  | $$ _| $$_     ______   \$$  ______    ______\$$$$$$$$______  | $$\   /  $$  ______    ______    ______  
+# | $$   | $$ /      \ | $$|   $$ \   |      \ |  \ /      \  /      \ | $$  |      \ | $$$\ /  $$$ /      \  /      \  /      \ 
+#  \$$\ /  $$|  $$$$$$\| $$ \$$$$$$    \$$$$$$\| $$|  $$$$$$\|  $$$$$$\| $$   \$$$$$$\| $$$$\  $$$$|  $$$$$$\|  $$$$$$\|  $$$$$$\
+#   \$$\  $$ | $$  | $$| $$  | $$ __  /      $$| $$| $$   \$$| $$    $$| $$  /      $$| $$\$$ $$ $$| $$    $$| $$   \$$| $$    $$
+#    \$$ $$  | $$__/ $$| $$  | $$|  \|  $$$$$$$| $$| $$      | $$$$$$$$| $$ |  $$$$$$$| $$ \$$$| $$| $$$$$$$$| $$      | $$$$$$$$
+#     \$$$    \$$    $$| $$   \$$  $$ \$$    $$| $$| $$       \$$     \| $$  \$$    $$| $$  \$ | $$ \$$     \| $$       \$$     \
+#      \$      \$$$$$$  \$$    \$$$$   \$$$$$$$ \$$ \$$        \$$$$$$$ \$$   \$$$$$$$ \$$      \$$  \$$$$$$$ \$$        \$$$$$$$
 
-class Question:
-    def __init__(self, Phrase, close_matche):
-        self.phrase_No_change = Phrase
-        self.phrase = Phrase.replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace(".","")
-        self.matche = close_matche.replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace(".","")
-        self.matche_No_Change = close_matche
-        self.corr_in_matche =  close_matche[close_matche.find("<") : close_matche.find(">")].replace("<","").replace(">","")
-        self.err_list = []
-        self.err_in_phrase = self.find_err()
+#################################################################################################################################                                                                                                                           
+#                                  Fichier contenant les algorithmes de détection de faute                                      #
+#################################################################################################################################
 
-    def find_err(self):
-        if self.matche == "":
-            print_debug("[find_err] No Close Match","yellow")
-            return ""
+import difflib
+from auto_learning import get_response_of_list_in_memory, get_data_in_memory
 
-        Words_err = ""
-        extrt = " "
-        i = 0
-        print_debug("[find_err] locating error...","cyan")
-        while extrt != "":
-            extrt = self.matche[self.matche.find("<",i) : self.matche.find(">",i) ].replace("<","").replace(">","") 
-            try:
-                if self.matche[self.matche.find(">",i)+1] != " " and extrt != "":
-                    if self.matche[self.matche.find(">",i)+1 : self.matche.find(" ",self.matche.find(">",i))] != "":
-                        extrt += self.matche[self.matche.find(">",i)+1 : self.matche.find(" ",self.matche.find(">",i))]
-                    else:
-                        extrt += self.matche[self.matche.find(">",i)+1 :]
-            except:
-                pass
+def locate_err_in_sentence(sentence, match_of_sentence): #aka "ImGonnaFuckYourMomVoltaire"
+    """
+    ############## description ##############\n
+    Compare la phrase et un match, si à la fin de la comparaison le seul mot qui reste dans le match sont les mots entre "<>" 
+    alors renvoie le mot considéré comme l'erreur et la liste dans laquelle il a été sélectionné.
 
-            i = self.matche.find(">",i)+1
-            if extrt != "" and extrt not in Words_err:
-                Words_err += extrt+" "
+    ######### parametre(s) et resultat(s) #########\n
+    :param sentence: [str] Phrase affichée à l'écran.
+    :param match_of_sentence: [str] le/un match de la phrase.
+    :return: [tuple(str, list)] Erreur de la phrase et liste de laquelle il provient.
+    """
 
-        Words_err = Words_err.split()
-        list_String_Err = self.phrase.split()
-        list_String_Corr = self.matche.replace("<","").replace(">","").split()
-        print_debug("[find_err] err: "+str(Words_err),"cyan")
-        print_debug("[find_err] phrase: "+str(list_String_Err),"cyan")
-        print_debug("[find_err] matche: "+str(list_String_Corr),"cyan")
+    if match_of_sentence == "":
+        return None, None
+    ################### phase de traitement de la phrase et du match pour formater leurs écritures ###################
+    sentence = sentence.replace(":", ": ").replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace("."," .").replace(","," , ").split()
+    match_of_sentence = match_of_sentence.replace(":", ": ").replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace("."," .").replace(","," , ")
+    match_of_sentence = match_of_sentence.replace("' >", "'>  ").split()
 
-        for i in range(0,len(list_String_Corr)):
-
-            if list_String_Corr[i] in list_String_Err:
-                list_String_Err[ list_String_Err.index( list_String_Corr[i] ) ] = ""
-                list_String_Corr[i] = ""
+    ###################### phase de récuperation des mots corrigés dans le match (ceux encadrés par les balise "<" et ">") ######################
+    mot_corriger = []
+    save_word = False
+    for x in range(0, len(match_of_sentence)):
+        if "<" in match_of_sentence[x]: #ouvre la récupération des mots erreurs
+            save_word = True
         
-        list_String_Err = [list_String_Err[i] for i in range(0,len(list_String_Err)) if list_String_Err[i] != ""]
-        list_String_Corr = [list_String_Corr[i] for i in range(0,len(list_String_Corr)) if list_String_Corr[i] != ""]
-
-        for i in range(0, len(list_String_Corr)):
-            if list_String_Corr[i].replace("…","") not in Words_err:
-                print_debug("[find_err] Words_err: "+str(Words_err),"cyan")
-                print_debug("[find_err] list_String_Corr: "+str(list_String_Corr),"cyan")
-                print_debug("[find_err] list_String_Err: "+str(list_String_Err),"cyan")
-                print_debug("[find_err] Close Match INCORRECT\n","yellow")
-                return ""
-
-        if list_String_Corr == [] and list_String_Err == []:
-            print_debug("[find_err] Close Match INCORRECT\n","yellow")
-            return ""
-
-        print_debug("[find_err] Close Match CORRECT","green")
-
-        if list_String_Err == []:
-            list_String_Err = Words_err
-
-        if "'" in list_String_Err[0]:
-            try:
-                list_String_Err[0] = list_String_Err[1]
-            except:
-                list_String_Err[0] =  list_String_Err[0][ 0 : list_String_Err[0].find("'")]
-            
-
-        if "-" in list_String_Err[0]:
-            list_String_Err[0] = list_String_Err[0][ 0 : list_String_Err[0].find("-")]
+        if save_word and match_of_sentence[x] != "":
+            mot_corriger += [match_of_sentence[x].replace("<","").replace(">","")]
         
-        print_debug("[find_err] Words_err: "+str(Words_err),"cyan")
-        print_debug("[find_err] list_String_Corr: "+str(list_String_Corr),"cyan")
-        print_debug("[find_err] list_String_Err: "+str(list_String_Err),"cyan")
-        self.err_list = list_String_Err
+        if ">" in match_of_sentence[x]: #ferme la récupération des mots erreurs
+            save_word = False
+        
+        match_of_sentence[x] = match_of_sentence[x].replace("<","").replace(">","") #fini le formatage
 
-        if len(list_String_Err) > 1:
-            return list_String_Err[ auto_learning().memory_data(list_String_Err) ]
-        else:
-            return list_String_Err[0]
+    print("[locate_err_in_sentence] sentence = ", sentence, "\n                 match_of_sentence = ",match_of_sentence,"\n                 mot_corriger = ", mot_corriger)
+
+    ######################## phase de trie seule les mots différents entre les phrases sont gardé ########################
+    for i in range(0, len(match_of_sentence)):
+        if match_of_sentence[i] in sentence:
+            sentence[ sentence.index(match_of_sentence[i]) ] = ""
+            match_of_sentence[i] = ""
     
-    def print_class(self):
-        print_debug("[Question] phrase:"+self.phrase,"white")
-        print_debug("[Question] match:"+self.matche,"white")
-        print_debug("[Question] corr_in_matche"+self.corr_in_matche,"white")
-        print_debug("[Question] err_in_phrase"+self.err_in_phrase,"white")
+    #suppresion des "" dans les listes
+    sentence = [sentence[i] for i in range(0,len(sentence)) if sentence[i] != ""]
+    match_of_sentence =  [match_of_sentence[i] for i in range(0,len(match_of_sentence)) if match_of_sentence[i] != ""]
+
+    print("[locate_err_in_sentence] sentence = ", sentence, "\n                 match_of_sentence = ",match_of_sentence,"\n                 mot_corriger = ", mot_corriger)
+
+    ####################### test des resultats avant recuperation de l'erreur #######################
+    if sentence == []:
+        print("[locate_err_in_sentence] reajustement de sentence à", mot_corriger)
+        sentence = mot_corriger
     
-def found_matche(Phrase, data):
-    matches = difflib.get_close_matches(Phrase, data) + auto_learning().memory_match(Phrase)
+    ######################## verifiaction ########################
+    for i in range(0, len(match_of_sentence)):
+        if match_of_sentence[i] not in mot_corriger:
+            print("[locate_err_in_sentence] match incorrect")
+            return None, None
+    print("[locate_err_in_sentence] match correcte")
+    
+    ######################## traitement de la reponse final ########################
+    error_in_sentence  = get_response_of_list_in_memory(sentence)
+    error_in_sentence = error_in_sentence.replace("'","").replace("-","").replace("…","").replace("@","").replace("!", "").replace("?", "").replace(";","").replace(":","")
+    if "." in error_in_sentence and error_in_sentence != ".":
+        error_in_sentence.replace(".","")
+    print("[locate_err_in_sentence] error_in_sentence =", error_in_sentence)
+    return error_in_sentence, sentence
 
-    print_debug("[found_matche] close matches: "+str(matches),"white")
-    if matches != []:
 
-        for i in range(0, len(matches)):
-            if "<" in matches[i]:
-                question = Question(Phrase, matches[i])
+def locate_good_one(sentence, match_of_sentence, error_in_sentence):
+    """
+    ############## description ##############\n
+    Renvoie la position du mot sur lequel on doit cliquer dans le cas ou le mot est présent en plusieurs exemplaires.
 
-                if question.err_in_phrase != "":
-                    print_debug("[found_matche] CLOSE MATCH FOUND: "+str(matches[i]),"white")
-                    print_debug("[found_matche] ERROR: "+str(question.err_in_phrase),"green")
-                    return question
+    exemple:
 
-    print_debug("[found_matche] NO CLOSE MATCH FOUND","white")
-    print_debug("[found_matche] NO ERROR","green")
-    return Question(Phrase, "")
+    :sentence = "je suis une phrase phrase exemple"
+    :match_of_sentence = "je suis une phrase <phrase> exemple"
+    :error_in_sentence = "phrase"
 
-def found_good_one(phrase, match, err_in_phrase):
-    nmb_presence = phrase.count(err_in_phrase)
-    match = match.split()
-    if nmb_presence != 1:
+    la fonction va donc return 1. Dans le cas ou le match aurait été "je suis une phrase exemple" on aurait eu 0.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param sentence: [str] Phrase affichée à l'écran.
+    :param match_of_sentence: [str] Le/un match de la phrase.
+    :param error_in_sentence: [str] Erreur dans la phrase.
+    :return: [int] Sa position dans la phrase.
+    """
+    #si il n'y a pas de match ca sert à rien de compter
+    if match_of_sentence == None:
+        return 0
+
+    match_of_sentence = match_of_sentence.replace(":", ": ").replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace("."," . ").replace(","," , ").replace(";", " ; ").split()
+    if  sentence.count(error_in_sentence) > 1: #si le mot existe en plusieurs exemplaires
         i = 0
         j = 0
-        while "<" not in match[i] and i < len(match):
-            if match[i].replace("\'"," ").replace("-"," ") == err_in_phrase:
+        #compte les occurrences jusqu'à tomber sur l'erreur
+        while "<" not in match_of_sentence[i] and i < len(match_of_sentence):
+            if match_of_sentence[i].replace("'","").replace("-","").replace("…","").replace("!", "") == error_in_sentence:
                 j += 1
             i += 1
         return j
     else:
         return 0
 
-class auto_learning():
-    def add_data(self, list_err, real_err):
-        print_debug("[auto_learning] failed to locate error, learning...", "yellow")
-        f = open(".\\file\\auto_learning_data.txt", "r", encoding="utf-8")
-        data = json.loads(f.read())
-        f.close()
-        f = open(".\\file\\auto_learning_data.txt", "w", encoding="utf-8")
-        data[str(list_err)] = real_err
-        f.write( json.dumps(data) )
-        f.close()
+#pronominal uniquement
+def get_verbe_in_sentence(data_of_type, sentence):
+    """
+    ############## description ##############\n
+    Parcours les verbes de la base de données jusqu'à en trouver un qui est dans la phrase.
 
-    def memory_data(self, input_list):
-        memory_call = found_data("./file/auto_learning_data.txt",str(input_list))
-        if memory_call:
-            print_debug("[auto_learning] found error in memory","magenta")
-            return memory_call
+    ######### parametre(s) et resultat(s) #########\n
+    :param data_of_type: [list] Base de données utilisée.
+    :param sentence: [str] Phrase affichée à l'écran.
+    :return: [str] Verbe trouver dans la base de données.
+    """
+    i = 0
+    for i in range(0, len(data_of_type)):
+        if data_of_type[i] in sentence:
+            print("[get_verbe_in_sentence] verbe found:"+data_of_type[i])
+            return data_of_type[i]
+
+    print("[get_verbe_in_sentence] None")
+    return None
+
+
+def get_error(type, DATA, consigne, sentence):
+    """
+    ############## description ##############\n
+    Test tous les matchs pour une phrase affichée à l'écran et renvoie un dictionnaire avec tous les informations à la fin des tests.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param type: [str] Indique le type d'exercice d'où proviens la phrase ("point_on_error" ou "pronominal").
+    :param DATA: [class DATA] classe qui regroupe tous les données charger.
+    :param consigne: [str] Consigne affichér a l'écran (uniquement pour le type pronominal).
+    :param sentence: [str] Phrase affichée à l'écran.
+    :return: [dict] 
+                    {"error": [str] erreur localisée
+                    "list_from_error": [list] liste de la détection d'erreurs (point_on_error et catégorie "prnm" de pronominal uniquement)
+                    "matche": [str] matche trouvé (point_on_error et catégorie "prnm" de pronominal uniquement)
+                    "type": [str] type de verbe pronominal trouvé (pronominal uniquement) }
+    """
+    return_values = {"error": None, #erreur localiser
+                    "list_from_error": None, #liste de la detetction d'erreur (point_on_error et categorie "prnm" de pronominal uniquement)
+                    "matche": None, #matche trouver (point_on_error et categorie "prnm" de pronominal uniquement)
+                    "type": None} #type de verbe pronominal trouver (pronominal uniquement)
+
+    if type == "point_on_error":
+        matches = difflib.get_close_matches(sentence, DATA.data_level + get_data_in_memory())
+        print("[get_error] matches = ", matches)
+        if matches != []:
+
+            for i in range(0, len(matches)):
+                if "<" in matches[i]:
+                    return_values["error"], return_values["list_from_error"] = locate_err_in_sentence(sentence, matches[i])
+                    return_values["matche"] = matches[i]
+
+                    if return_values["error"] != None:
+                        print("[get_error] matche found ERROR: "+ return_values["error"])
+                        return return_values
+                    
+                #reinitialisation en cas d'echec
+                return_values["error"] = None
+                return_values["list_from_error"] = None
+                return_values["matche"] = None
+
+
+        print("[get_error] matche not found: NO ERROR")
+        return return_values
+
+    #c'est moche mais c'est simple à comprendre et ça marche
+    elif type == "pronominal":
+        sentence_split = sentence.replace("‑","-").replace("-","- ").replace(",","").replace(".","").replace("'","' ").split()
+        if "essentiellement" in consigne:
+            return_values["matche"] = sentence
+            return_values["type"] = "ess"
+            return_values["error"] = get_verbe_in_sentence(DATA.data_verbe_ess, sentence_split)
+            return return_values
+        elif "autonome" in consigne:
+            return_values["matche"] = sentence
+            return_values["type"] = "atnm"
+            return_values["error"] = get_verbe_in_sentence(DATA.data_verbe_atnm, sentence_split)
+            return return_values
+        elif "passif" in consigne:
+            return_values["matche"] = sentence
+            return_values["type"] = "pass"
+            return_values["error"] = get_verbe_in_sentence(DATA.data_verbe_pass, sentence_split)
+            return return_values
+        elif "accidentellement" in consigne:
+            return_values["matche"] = sentence
+            return_values["type"] = "acc"
+            return_values["error"] = get_verbe_in_sentence(DATA.data_verbe_acc, sentence_split)
+            return return_values
         else:
-            print_debug("[auto_learning] no error found in memory","magenta")
-            return 0
-    
-    def add_match(self, sentence, real_err):
-        print_debug("[auto_learning] failed to found match, learning...", "yellow")
-        f = open(".\\file\\auto_learning_match.txt", "r", encoding="utf-8")
-        sentence = " "+sentence
-        try:
-            sentence = sentence[ :sentence.index(" "+real_err)] + " <@" + real_err + ">" + sentence[ sentence.index(" "+real_err)+len(real_err)+1:]
-        except:
-            try:
-                sentence = sentence[ :sentence.index("'"+real_err)] + "'<@" + real_err + ">" + sentence[ sentence.index("'"+real_err)+len(real_err)+1:]
-            except:
-                sentence = sentence[ :sentence.index("-"+real_err)] + "-<@" + real_err + ">" + sentence[ sentence.index("-"+real_err)+len(real_err)+1:]
-        sentence = [ sentence[1:] ]
-        data = json.loads(f.read())
-        f.close()
-        f = open(".\\file\\auto_learning_match.txt", "w", encoding="utf-8")
-        f.write(json.dumps(data+sentence))
-        f.close()
-    
-    def memory_match(self, sentence):
-        f = open(".\\file\\auto_learning_match.txt", "r", encoding="utf-8")
-        memory_match_list = json.loads(f.read())
-        
-        return difflib.get_close_matches(sentence, memory_match_list)
+            matches = difflib.get_close_matches(sentence, DATA.data_verbe_prnm)
+            print("[get_error] matches = ", matches)
+            if matches != []:
+
+                for i in range(0, len(matches)):
+                    if "<" in matches[i]:
+                        return_values["error"], return_values["list_from_error"] = locate_err_in_sentence(sentence, matches[i])
+                        return_values["matche"] = matches[i]
+
+                        if return_values["error"] != None:
+                            print("[get_error] matche found ERROR: "+ return_values["error"])
+                            return return_values
+                        
+                    #reinitialisation en cas d'echec
+                    return_values["error"] = None
+                    return_values["list_from_error"] = None
+                    return_values["matche"] = None
+
+            print("[get_error] matche not found: NO ERROR")
+            return return_values

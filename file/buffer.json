@@ -1,0 +1,1 @@
+{"Label": {"name": "text", "text": "Vous utilisez actuellement \nune versions BETA de VoltaireTaMere,\n des bugs peuvent \u00eatre pr\u00e9sent.\n Merci de les signaler \u00e0 Kim Jung Hun#3359\n", "bg": "#262626", "fg": "#ffffff", "font": ["Helvetica", "12"], "column": 0, "row": 0}, "Button": [{"name": "quit", "text": "OK", "bd": 0, "row": 1, "padx": 130}]}

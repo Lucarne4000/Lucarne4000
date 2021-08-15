@@ -1,188 +1,222 @@
-from Question import Question, found_matche, found_good_one
-from file_function import print_debug
-from selenium.webdriver.common.by import By
-from random import randint
+#  __     __            __    __                __                   ________          __       __                               
+# |  \   |  \          |  \  |  \              |  \                 |        \        |  \     /  \                              
+# | $$   | $$  ______  | $$ _| $$_     ______   \$$  ______    ______\$$$$$$$$______  | $$\   /  $$  ______    ______    ______  
+# | $$   | $$ /      \ | $$|   $$ \   |      \ |  \ /      \  /      \ | $$  |      \ | $$$\ /  $$$ /      \  /      \  /      \ 
+#  \$$\ /  $$|  $$$$$$\| $$ \$$$$$$    \$$$$$$\| $$|  $$$$$$\|  $$$$$$\| $$   \$$$$$$\| $$$$\  $$$$|  $$$$$$\|  $$$$$$\|  $$$$$$\
+#   \$$\  $$ | $$  | $$| $$  | $$ __  /      $$| $$| $$   \$$| $$    $$| $$  /      $$| $$\$$ $$ $$| $$    $$| $$   \$$| $$    $$
+#    \$$ $$  | $$__/ $$| $$  | $$|  \|  $$$$$$$| $$| $$      | $$$$$$$$| $$ |  $$$$$$$| $$ \$$$| $$| $$$$$$$$| $$      | $$$$$$$$
+#     \$$$    \$$    $$| $$   \$$  $$ \$$    $$| $$| $$       \$$     \| $$  \$$    $$| $$  \$ | $$ \$$     \| $$       \$$     \
+#      \$      \$$$$$$  \$$    \$$$$   \$$$$$$$ \$$ \$$        \$$$$$$$ \$$   \$$$$$$$ \$$      \$$  \$$$$$$$ \$$        \$$$$$$$
 
-def test_Feature(Feature, driver): #test la presence d'une feature
+#################################################################################################################################                                                                                                                           
+#                                Fichier contenant les routines automatiques et manuelles                                       #
+#################################################################################################################################
+
+import json
+from random import randint
+from auto_learning import add_sentence_in_memory, add_response_of_list_in_memory
+from response_process import get_error, locate_good_one
+from time import sleep
+
+def test_Feature(Feature, driver):
+    """
+    ############## description ##############\n
+    Test la presence du feature a l'écran.
+
+    ######### parametre(s) et resultat(s) #########\n
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :param Feature: [str] Nom de classe html de la feature à tester.
+    :return: [bool] 
+    """
     try:
         driver.find_element_by_class_name(Feature)
         return True
     except:
         return False
 
-def found_verbe(data, phrase):
-    i = 0
-    for i in range(0, len(data)):
-        if data[i] in phrase and data[i] != '':
-            print_debug("[found_verbe] verbe found:"+data[i], "green")
-            return data[i]
-    print_debug("[found_verbe] None", "red")
-    return None
+def auto_mode_routine(DATA, driver, accuracy): #aka "ImAFuckingRobotDumbAss"
+    """
+    ############## description ##############\n
+    Fonction qui va répondre automatiquement à une question afficher à l'écran.
 
-def BOT(driver, module, accr):
-    print_debug("[BOT] ####### WORKING #######","white")
+    ######### parametre(s) et resultat(s) #########\n
+    :param DATA: [class DATA] Classe qui regroupe tous les données charger.
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :param accuracy: [int] pourcentage de précision.
+    :return: [int] code resultat, 0: RAS, -1: crash, -2: fin de niveau
+    """
 
-    if not(module.test_blanc):
-        if test_Feature("sentenceAudioReader", driver):
-            driver.find_element_by_id("btn_speaker").click()
-            driver.find_element_by_id("btn_non").click()
+    print("\n[auto_mode_routine] ############# WORKING... #############")
+    with open("./file/xpath.json", "r", encoding="utf-8") as f:
+        xpath = json.loads(f.read())
 
-        if test_Feature("popupContent", driver):
+    ############################################## INITIALISATION ##############################################
+    #Désactive les fonctions audio
+    print("[auto_mode_routine] test pour les fonctions audio...")
+    if test_Feature("sentenceAudioReader", driver):
+        print("[auto_mode_routine] audio disable")
+        driver.find_element_by_xpath(xpath["audio_icon"]).click()
+        driver.find_element_by_xpath(xpath["audio_close"]).click()
+
+    #Vérifie si une pop-up est présente
+    print("[auto_mode_routine] test pour une pop-up...")
+    if test_Feature("popupContent", driver):
+        try:
+            driver.find_element_by_xpath(xpath["close_pop_up"]).click()
+        except:
+            sleep(1)
+            if test_Feature("popupContent", driver):
+                print("[auto_mode_routine] FAILED TO EXECUTE FEATURE IN")
+                return -1
+            else:
+                return -2
+    
+    #identification du type de question
+    print("[auto_mode_routine] identification de la question...")
+    try:
+        consigne = driver.find_element_by_xpath(xpath["consigne"]).text
+        type_of_exercise = "pronominal"
+    except:
+        consigne = None
+        type_of_exercise = "point_on_error"
+    print("[auto_mode_routine] type =", type_of_exercise)
+    
+    #Récupération de la phrase a l'écran
+    print("[auto_mode_routine] recuperation de la phrase...")
+    try:
+        sentence =  driver.find_element_by_xpath(xpath["sentence"]).text
+        print("[auto_mode_routine] sentence =",sentence)
+    except:
+        print("[auto_mode_routine] FAILED TO EXECUTE NO SENTENCE")
+        return -2   
+
+    #Récupération de l'erreur
+    print("[auto_mode_routine] identification de l'erreur...")
+    error_information = get_error(type_of_exercise, DATA, consigne, sentence)
+
+    ################################ phase d'auto-fail si demandé ################################
+
+    if randint(1,100) > accuracy and type_of_exercise != "pronominal":
+        if error_information["error"] != None: #si il y a une erreur clique sur "pas d'erreur"
+            driver.find_elements_by_xpath(xpath["no_error"])[0].click()
+            print("[auto_mode_routine] AUTO FAIL")
+        else: #si n'il y a pas d'erreur clique sur le premier mot de phrase
+            list_sentence = sentence.replace(":", ": ").replace("‑","-").replace("-","- ").replace("'","' ").replace("(","( ").replace(")"," )").replace("."," .").replace(","," , ").split()
+            driver.find_elements_by_xpath("//span[.='"+ list_sentence[0].replace("‑","-").replace("-"," ").replace("'"," ") +"']")[0].click()
+            print("[auto_mode_routine] AUTO FAIL")
+            
+        try:
+            driver.find_elements_by_xpath(xpath["next"])[0].click()
+        except:
+            pass
+        return 0
+
+    ################################ Phase de clique sur l'erreur ou sur "aucune faute" ################################
+    if error_information["error"] != None:
+        #clique sur l'erreur
+        try:
+            driver.find_elements_by_xpath("//span[.='"+ error_information["error"]+"']")[ locate_good_one(sentence, error_information["matche"], error_information["error"]) ].click()
+            print("[auto_mode_routine] EXECUTION CLICK DONE")
+        except:
             try:
-                driver.find_element_by_id("btn_fermer").click()
+                driver.find_elements_by_xpath("//span[.='"+ error_information["error"]+"…"+"']")[ locate_good_one(sentence, error_information["matche"], error_information["error"]) ].click()
+                print("[auto_mode_routine] EXECUTION CLICK DONE")
             except:
-                print_debug("[BOT] FAILED TO EXECUTE FEATURE IN","red")
-                return "feature_in"
-
-    if module.verbe_pron_I:
-        pron_rep = test_Feature("instructions", driver)
+                print("[auto_mode_routine] FAILED TO TOUCHE ERROR")
+                return -1
     else:
-        pron_rep = False
+        try:
+            driver.find_elements_by_xpath(xpath["no_error"])[0].click()
+            print("[auto_mode_routine] EXECUTION CLICK DONE")
+        except:
+            try:
+                #si échoue à toucher le bouton "il n'y a pas de faute" touche le premier mot de la phrase
+                list_sentence = sentence.replace("‑","-").replace("-"," ").replace("'"," ").split()
+                driver.find_elements_by_xpath("//span[.='"+ list_sentence[0] +"']")[0].click()
+                print("[auto_mode_routine] FAILED TO TOUCHE NO ERROR")
+                if type_of_exercise == "point_on_error":
+                    return -1
+            except Exception as e:
+                print("####################################################")
+                print(e)
+                print("[auto_mode_routine] ^^^ FAILED EXCEPTION TOUCHE NO ERROR ^^^")
+                return -1
+    
+    ################################ Phase de vérification de l'action et d'apprentissage si erreur ################################
+
+    if driver.find_elements_by_xpath(xpath["wrong_answer_title"]) != []:
+        print("[auto_mode_routine] failed, learning...")
+        asnwer =driver.find_elements_by_xpath(xpath["answer_word"])[0].text
+        print("[auto_mode_routine] asnwer =", asnwer)
+        if error_information["matche"] == None or ("réfléchi" in consigne and "accidentellement" not in consigne): #dans le cas ou le l'algorithme a échoué à trouver un match l'apprend
+            add_sentence_in_memory(type_of_exercise, sentence, asnwer)
+        else: #dans le cas ou l'algorithme a échoué à correctement localiser l'erreur l'apprend
+            add_response_of_list_in_memory(type_of_exercise, error_information["list_from_error"], asnwer, consigne)
 
     try:
-        Phrase = driver.find_element_by_class_name("sentence").text
-        print_debug("[BOT] PHRASE: "+str(Phrase),"white")
+        driver.find_elements_by_xpath(xpath["next"])[0].click()
     except:
-        return "no_sentence"
-            
-    if not(pron_rep):
+        pass
+    return 0
 
-        question = found_matche(Phrase, module.data)
 
-        if randint(1,100) > accr:
-            if question.matche != "":
-                if not(module.test_blanc):
-                    driver.find_element_by_id("btn_pas_de_faute").click()
-                else:
-                    driver.find_element_by_class_name("noMistakeButton").click()
-            else:
-                print(question.phrase.split()[0].replace(",","").replace("'",""))
-                driver.find_elements_by_xpath("//span[.='"+ question.phrase.split()[0].replace(",","").replace("'","").replace("-","") +"']")[0].click()
-            return ["auto_fail"]
-        
-        if question.matche != "":
-            try:
-                driver.find_elements_by_xpath("//span[.='"+ question.err_in_phrase +"']")[ found_good_one(question.phrase, question.matche, question.err_in_phrase) ].click()
-                print_debug("[BOT] EXECUTION CLICK DONE","green")
-            except:
-                try:
-                    driver.find_elements_by_xpath("//span[.='"+ question.err_in_phrase.replace("…","").replace(",","").replace(".","").replace(";","") +"']")[ found_good_one(question.phrase, question.matche, question.err_in_phrase.replace("…","")) ].click()
-                except:
-                    print_debug("[BOT] FAILED TO EXECUTE CAN'T TOUCH: "+str(question.err_in_phrase),"red")
-                    return "can't_touche &"+str(question.err_in_phrase)
-        else:
-            try:
-                driver.find_element_by_class_name("noMistakeButton").click()
-                print_debug("[BOT] EXECUTION NO MISTAKE DONE","green")
-            except:
-                return []
-        
-        return question.err_list
-    else:
-        if test_Feature("popupContent", driver):
-            try:
-                driver.find_element_by_id("btn_fermer").click()
-            except:
-                print_debug("[BOT] FAILED TO EXECUTE FEATURE IN","red")
-                return "feature_in"
-        consigne = driver.find_element_by_class_name("instructions").text
-        phrase_clear = driver.find_element_by_class_name("sentence").text.replace("‑","-").replace(",","").replace(".","")
-        phrase = phrase_clear.replace("‑","-").replace("-","- ").replace(",","").replace(".","").replace("'","' ").split()
-        if "essentiellement" in consigne:
-            verbe = found_verbe(module.ess, phrase)
-        elif "autonome" in consigne:
-            verbe = found_verbe(module.atnm, phrase)
-        elif "passif" in consigne:
-            verbe = found_verbe(module.pas, phrase)
-        elif "accidentellement" in consigne:
-            verbe = found_verbe(module.acc, phrase)
-        else:
-            question = found_matche(phrase_clear, module.match)
-            verbe = question.corr_in_matche.replace("@","")
+def manuel_mode_routine(DATA, driver):
+    """
+    ############## description ##############\n
+    Donne la réponse à une question.
 
-        if verbe != None and verbe != "":
-            if "réfléchi" in consigne and "accidentellement" not in consigne:
-                driver.find_elements_by_xpath("//span[.='"+ verbe.replace("-","").replace("'","") +"']")[found_good_one(question.phrase, question.matche, question.err_in_phrase)].click()
-                print_debug("CLICK DONE", "green")
+    ######### parametre(s) et resultat(s) #########\n
+    :param DATA: [class DATA] Classe qui regroupe tous les données charger.
+    :param driver: [class selenium Chrom driver] Driver de la fenêtre Chrome.
+    :return: [str] Phrase qui indique l'erreur et sa position.
+    """
+    print("\n[manuel_mode_routine] ############# WORKING... #############")
+    with open("./file/xpath.json", "r", encoding="utf-8") as f:
+        xpath = json.loads(f.read())
 
-                if driver.find_elements_by_xpath("//span[@title='Mauvaise réponse']") != []:
-                    print_debug("FAILED, learning...\n", "magenta")
-                    add_data = driver.find_element_by_class_name("answerWord").text.replace("‑","-").replace("-","- ").replace(",","").replace(".","").replace("'","' ").split()
-                    add_data = add_data[len(add_data)-1].replace(" ","")
-                    match1 = question.matche_No_Change
-                    match2 = match1[:match1.index(add_data, match1.index(">"))] + "<@" + add_data + ">" + match1[match1.index(add_data, match1.index(">"))+len(add_data):]
-                    match2 = match2[ :match2.index("<") ] + add_data + match2[ match2.index(">")+1:]
-                    module.match[module.match.index(match1)] = match2
-            else:
-                driver.find_elements_by_xpath("//span[.='"+ verbe +"']")[0].click()
-                print_debug("CLICK DONE", "green")
+    ############################################## INITIALISATION ##############################################
+    #Désactive les fonctions audio
+    print("[manuel_mode_routine] test pour les fonctions audio...")
+    if test_Feature("sentenceAudioReader", driver):
+        print("[manuel_mode_routine] audio disable")
+        driver.find_element_by_xpath(xpath["audio_icon"]).click()
+        driver.find_element_by_xpath(xpath["audio_close"]).click()
 
-        else:
-            print_debug("FAILED, learning...", "magenta")
-            print(phrase)
-            driver.find_elements_by_xpath("//span[.='"+ phrase[0].replace("-","").replace("'","") +"']")[0].click()
-            add_data = driver.find_element_by_class_name("answerWord").text.replace("‑","-").replace("-","- ").replace(",","").replace(".","").replace("'","' ").split()
-            add_data = add_data[len(add_data)-1].replace(" ","")
-            if "essentiellement" in consigne:
-                module.ess += [add_data]
-            elif "autonome" in consigne:
-                module.atnm += [add_data]
-            elif "passif" in consigne:
-                module.pas += [add_data]
-            elif "accidentellement" in consigne:
-                module.acc += [add_data]
-            else:
-                module.match += [phrase_clear[:phrase_clear.index(add_data)] + "<@" + add_data + ">" + phrase_clear[phrase_clear.index(add_data)+len(add_data):]]
-            
-        return ["verbe_pron_I"]
-
-def MANUAL(driver, module):
-    if not(module.test_blanc):
-        if test_Feature("sentenceAudioReader", driver):
-            driver.find_element_by_id("btn_speaker").click()
-            driver.find_element_by_id("btn_non").click()
-
-        if test_Feature("popupContent", driver):
-            try:
-                driver.find_element_by_id("btn_fermer").click()
-            except:
-                print_debug("[BOT] FAILED TO EXECUTE FEATURE IN","red")
-                return "feature_in"
+    #Vérifie si une pop-up est présente
+    print("[manuel_mode_routine] test pour une pop up...")
+    if test_Feature("popupContent", driver):
+        print("[manuel_mode_routine] FAILED TO EXECUTE FEATURE IN")
+        return -1
     
+    #identification du type de question
+    print("[manuel_mode_routine] identification de la question...")
     try:
-        Phrase = driver.find_element_by_class_name("sentence").text
-        print_debug("[BOT] PHRASE: "+str(Phrase),"white")
+        consigne = driver.find_element_by_xpath(xpath["consigne"]).text
+        type_of_exercise = "pronominal"
     except:
-        return "no_sentence"
+        consigne = None
+        type_of_exercise = "point_on_error"
+    print("[manuel_mode_routine] type =", type_of_exercise)
     
-    if module.verbe_pron_I:
-        pron_rep = test_Feature("instructions", driver)
+    #Récupération de la phrase a l'écran
+    print("[manuel_mode_routine] recuperation de la phrase...")
+    try:
+        sentence =  driver.find_element_by_xpath(xpath["sentence"]).text
+        print("[manuel_mode_routine] sentence =",sentence)
+    except:
+        print("[manuel_mode_routine] FAILED TO EXECUTE NO SENTENCE")
+        return -2   
+
+    #Récupération de l'erreur
+    print("[manuel_mode_routine] identification de l'erreur...")
+    error_information = get_error(type_of_exercise, DATA, consigne, sentence)
+    nmb = locate_good_one(sentence, error_information["matche"], error_information["error"])
+
+    ############################################## RETURN ##############################################
+    if error_information["error"] == None:
+        return "Aucune erreur dans cette phrase"
     else:
-        pron_rep = False
-
-    if not(pron_rep):
-        question = found_matche(Phrase, module.data)
-
-        if question.matche != "":
-            return question.err_in_phrase
+        if nmb > 0:
+            return "L'erreur dans la phrase est le "+str(nmb+1)+"eme \""+str(error_information["error"])+"\""
         else:
-            return "no_error"
-    else:
-        consigne = driver.find_element_by_class_name("instructions").text
-
-        phrase_clear = driver.find_element_by_class_name("sentence").text.replace("‑","-").replace(",","").replace(".","")
-        phrase = phrase_clear.replace("‑","-").replace("-","- ").replace(",","").replace(".","").replace("'","' ").split()
-        if "essentiellement" in consigne:
-            verbe = found_verbe(module.ess, phrase)
-        elif "autonome" in consigne:
-            verbe = found_verbe(module.atnm, phrase)
-        elif "passif" in consigne:
-            verbe = found_verbe(module.pas, phrase)
-        elif "accidentellement" in consigne:
-            verbe = found_verbe(module.acc, phrase)
-        else:
-            question = found_matche(phrase_clear, module.match)
-            verbe = question.corr_in_matche.replace("@","")
-        
-        return verbe
-
+            return "L'erreur dans la phrase est \""+str(error_information["error"])+"\""
