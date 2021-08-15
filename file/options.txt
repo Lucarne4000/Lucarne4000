@@ -1,1 +1,0 @@
-{"auto_login": 1, "accuracy": "100", "time": "1"}
