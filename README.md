@@ -7,14 +7,17 @@ FAQ: https://sites.google.com/view/voltairetamere/faq
 ------------------------------------
 =========== [4.0.0] ===========
 [NEW]
+
 -Nouvelle architecture de code "blitzkrieg" + stable
 -Nouvelle interface plus simple
 -Mises à jour du driver et du logiciel automatique
 [MODIF]
+
 -Amélioration des algorithmes pour une meilleure précision
 -Utilisation de JSON
 -Meilleures gestions des crashs
 [DEL]
+
 -Plus besoin de charger de fichier, cela est fait automatiquement
 -Suppressions de la compatibilité avec Firefox et Opéra
 -Dispartion des fichiers de données
@@ -23,6 +26,7 @@ FAQ: https://sites.google.com/view/voltairetamere/faq
 DEMO: https://youtu.be/plQ6ko-PKJc
 
 REQUIREMENT:
+
 -Chrome
 -Un PC qui fonctionne
 
