@@ -7,14 +7,17 @@ FAQ: https://sites.google.com/view/voltairetamere/faq
 ------------------------------------
 =========== [4.0.0] ===========
 [NEW]
-
 -Nouvelle architecture de code "blitzkrieg" + stable
+
 -Nouvelle interface plus simple
+
 -Mises à jour du driver et du logiciel automatique
 [MODIF]
 
 -Amélioration des algorithmes pour une meilleure précision
+
 -Utilisation de JSON
+
 -Meilleures gestions des crashs
 [DEL]
 
