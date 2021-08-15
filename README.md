@@ -16,7 +16,7 @@
   * Suppressions de la compatibilité avec Firefox et Opéra
   * Dispartion des fichiers de données
 
-# ===============================
+# ============================
 # REQUIREMENTS:
   * Chrome
   * Un PC qui fonctionne
