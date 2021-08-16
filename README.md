@@ -1,6 +1,6 @@
 ### VoltaireTaMere c'est LE logiciel de triche au projet Voltaire le plus perfectionné. Avec plus de 8 mois de devellopement à sont actif vous pouvez etre sur que vous avez la LE programme qui vous termine le projet voltaire.
 
-#      [SITE](https://sites.google.com/view/voltairetamere/voltairetamere)       [FAQ](https://sites.google.com/view/voltairetamere/faq)       [DEMO](https://youtu.be/plQ6ko-PKJc)
+# [SITE](https://sites.google.com/view/voltairetamere/voltairetamere)  |  [FAQ](https://sites.google.com/view/voltairetamere/faq)  |  [DEMO](https://youtu.be/plQ6ko-PKJc)
 
 # =========== [4.0.0] ===========
 * [NEW]
